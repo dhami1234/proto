@@ -16,7 +16,6 @@
              -nstreams
              -nbox
              -iter
-             -texsize
              -pitch
              -pitchy
              -routine
@@ -81,14 +80,6 @@ mfloat h_kernel_3c_all[3*3*3] = {-1./12, -1./6, -1./12,
 
 __device__ __constant__ mfloat d_kernel_3c[3*3*3];
 
-
-#ifdef MSINGLE
-texture<float, 1, cudaReadModeElementType> texData1D;
-#else
-texture<int2 , 1, cudaReadModeElementType> texData1D;
-#endif
-
-cudaChannelFormatDesc floatTex;
 cudaExtent gridExtent;
 
 cudaArray *cu_array;
@@ -236,7 +227,6 @@ int bigTest(int argc, char*argv[])
   int iters = 10;
 
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
-  int texsize = 22;
   int nstream = 8;
   int nbox = 128;
   /* -------------------- */
@@ -262,13 +252,7 @@ int bigTest(int argc, char*argv[])
   cudaDeviceProp deviceProp;
   cudaGetDeviceProperties(&deviceProp, device);
   cudaSetDevice(device);
-  if(strstr(deviceProp.name, "1060")){
-    texsize = 22;
-  } else {
-    texsize = 24;
-  }
-  GetCmdLineArgumenti(argc, (const char**)argv, "texsize", &texsize);
-  printf("using device %s, using linear texture size: 2^%d elements\n", deviceProp.name, texsize);
+  printf("using device %s\n", deviceProp.name);
 
   int pitch  = nx;
   int pitchy = ny;
@@ -284,12 +268,6 @@ int bigTest(int argc, char*argv[])
   /* Initialization */
   /* -------------------- */
 
-  /* initialize texture */
-#ifdef MSINGLE
-  floatTex = cudaCreateChannelDesc<float>();
-#else
-  floatTex = cudaCreateChannelDesc<int2>();
-#endif
 
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
@@ -372,35 +350,33 @@ int bigTest(int argc, char*argv[])
       dim3 block(thrdim_x, thrdim_y, 1);
       dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
     
-      int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
+      int kstep  = nz;
       //printf("kstep %d\n", kstep);
     
       int kstart = 1;
       int kstop;
-      size_t texoffset;
  
+      mfloat* data;
+
       while(1)
       {
       
         kstop = std::min(kstart+kstep-2, nz-1);
         //printf("kstart %d, kstop %d\n", kstart, kstop);
-        cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
-                                      &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
- 
-        texoffset = texoffset/sizeof(mfloat);
+        data =  d_T1+(kstart-1)*pitch*pitchy;
       
         if(routine==1)
-          stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, data, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, data, kstart, kstop);
         else if(routine==3)
-          stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, data, kstart, kstop);
         else
-          stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, data, kstart, kstop);
       
         kstart = kstop;
         if(kstart>=nz-1) break;

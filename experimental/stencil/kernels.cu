@@ -39,9 +39,9 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
     r9=(shm)[tx+1+(ty+1)*bx];			\
   }						\
 
-__global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
-				       uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, uint texoffset, 
-				       uint kstart, uint kend)
+__global__ void stencil27_symm_exp(mfloat *out, mfloat a, mfloat b,
+				   uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, mfloat *data, 
+				   uint kstart, uint kend)
 {
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
@@ -88,15 +88,15 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
   extern __shared__ mfloat shm[];			
   const uint bx = blockDim.x+2*8;				
 
-  i1 = ixe+iye*pitch +texoffset;
-  i2 = ixe2+iye2*pitch +texoffset;
+  i1 = ixe+iye*pitch;
+  i2 = ixe2+iye2*pitch;
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *bx] = tex1Dfetch(texData1D, i1);
-  shm[txe2+tye2*bx] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *bx] = data[i1];
+  shm[txe2+tye2*bx] = data[i2];
 #endif
 
   __syncthreads();
@@ -109,11 +109,11 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
   i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *bx] = tex1Dfetch(texData1D, i1);
-  shm[txe2+tye2*bx] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *bx] = data[i1];
+  shm[txe2+tye2*bx] = data[i2];
 #endif
 
   __syncthreads();
@@ -131,11 +131,11 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
     i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-    v = tex1Dfetch(texData1D, i1); shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-    v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
 #else
-    shm[txe +tye *bx] = tex1Dfetch(texData1D, i1);
-    shm[txe2+tye2*bx] = tex1Dfetch(texData1D, i2);
+    shm[txe +tye *bx] = data[i1];
+    shm[txe2+tye2*bx] = data[i2];
 #endif
 
     __syncthreads();
@@ -150,9 +150,9 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
 }
 
 
-__global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
-						uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, uint texoffset, 
-						uint kstart, uint kend)
+__global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
+					    uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, mfloat *data, 
+					    uint kstart, uint kend)
 {
   mfloat r1, r2, r3, r4, r5, r6, r7, r8, r9;
 
@@ -203,14 +203,14 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
   extern __shared__ mfloat shm[];
   const uint bx = blockDim.x+2*8;				
 
-  i1 = ixe+iye*pitch +texoffset;
-  i2 = ixe2+iye2*pitch +texoffset;
+  i1 = ixe+iye*pitch;
+  i2 = ixe2+iye2*pitch;
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *bx] = tex1Dfetch(texData1D, i1);
-  shm[txe2+tye2*bx] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *bx] = data[i1];
+  shm[txe2+tye2*bx] = data[i2];
 #endif
 
   __syncthreads();  
@@ -220,11 +220,11 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *bx] = tex1Dfetch(texData1D, i1);
-  shm[txe2+tye2*bx] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *bx] = data[i1];
+  shm[txe2+tye2*bx] = data[i2];
 #endif
 
   //t1 = convolution_3x3_reg((kernel));
@@ -238,11 +238,11 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
   i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *bx] = tex1Dfetch(texData1D, i1);
-  shm[txe2+tye2*bx] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *bx] = data[i1];
+  shm[txe2+tye2*bx] = data[i2];
 #endif
 
   //t2 = convolution_3x3_reg((kernel));
@@ -260,11 +260,11 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
     i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-    v = tex1Dfetch(texData1D, i1); shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-    v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
 #else
-    shm[txe +tye *bx] = tex1Dfetch(texData1D, i1);
-    shm[txe2+tye2*bx] = tex1Dfetch(texData1D, i2);
+    shm[txe +tye *bx] = data[i1];
+    shm[txe2+tye2*bx] = data[i2];
 #endif
 
     //t3 = convolution_3x3_reg((kernel+18));
@@ -287,9 +287,9 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
 
 
 
-__global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
-					   uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, uint texoffset, 
-					   uint kstart, uint kend)
+__global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
+				       uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, mfloat *data, 
+				       uint kstart, uint kend)
 {
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
@@ -317,8 +317,8 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
 
   uint i1, i2;
   
-  i1 = ixe+iye*pitch + texoffset;
-  i2 = ixe+iye2*pitch + texoffset;
+  i1 = ixe+iye*pitch;
+  i2 = ixe+iye2*pitch;
 
   mfloat t1 = 0;
   mfloat t2 = 0;
@@ -334,11 +334,11 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
   extern __shared__ mfloat shm[];			
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *48] = tex1Dfetch(texData1D, i1);
-  shm[txe+tye2*48] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *48] = data[i1];
+  shm[txe+tye2*48] = data[i2];
 #endif
 
   __syncthreads();
@@ -350,11 +350,11 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
   i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *48] = tex1Dfetch(texData1D, i1);
-  shm[txe+tye2*48] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *48] = data[i1];
+  shm[txe+tye2*48] = data[i2];
 #endif
 
   __syncthreads();
@@ -372,11 +372,11 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
     i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-    v = tex1Dfetch(texData1D, i1); shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-    v = tex1Dfetch(texData1D, i2); shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
-    shm[txe +tye *48] = tex1Dfetch(texData1D, i1);
-    shm[txe+tye2*48] = tex1Dfetch(texData1D, i2);
+    shm[txe +tye *48] = data[i1];
+    shm[txe+tye2*48] = data[i2];
 #endif
 
     __syncthreads();
@@ -391,9 +391,9 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
 }
 
 
-__global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloat b,
-						    uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, uint texoffset, 
-						    uint kstart, uint kend)
+__global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
+						uint dimx, uint dimy, uint dimz, uint pitch, uint pitchy, mfloat *data, 
+						uint kstart, uint kend)
 {
   mfloat r1, r2, r3, r4, r5, r6, r7, r8, r9;
 
@@ -423,8 +423,8 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
 
   uint i1, i2;
   
-  i1 = ixe+iye*pitch + texoffset;
-  i2 = ixe+iye2*pitch + texoffset;
+  i1 = ixe+iye*pitch;
+  i2 = ixe+iye2*pitch;
 
   mfloat t1 = 0;
   mfloat t2 = 0;
@@ -442,11 +442,11 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
   extern __shared__ mfloat shm[];
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *48] = tex1Dfetch(texData1D, i1);
-  shm[txe+tye2*48] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *48] = data[i1];
+  shm[txe+tye2*48] = data[i2];
 #endif
 
   __syncthreads();  
@@ -457,11 +457,11 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
   i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye *48] = tex1Dfetch(texData1D, i1);
-  shm[txe+tye2*48] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye *48] = data[i1];
+  shm[txe+tye2*48] = data[i2];
 #endif
 
   //t1 = convolution_3x3_reg((kernel));
@@ -475,11 +475,11 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
   i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-  v = tex1Dfetch(texData1D, i1); shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+  v = reinterpret_cast<int2*>(data)[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
-  shm[txe +tye*48] = tex1Dfetch(texData1D, i1);
-  shm[txe+tye2*48] = tex1Dfetch(texData1D, i2);
+  shm[txe +tye*48] = data[i1];
+  shm[txe+tye2*48] = data[i2];
 #endif
 
   //t2 = convolution_3x3_reg((kernel));
@@ -497,11 +497,11 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
     i2 += pitch*pitchy;
 
 #ifndef MSINGLE
-    v = tex1Dfetch(texData1D, i1); shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-    v = tex1Dfetch(texData1D, i2); shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+    v = reinterpret_cast<int2*>(data)[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
-    shm[txe +tye *48] = tex1Dfetch(texData1D, i1);
-    shm[txe+tye2*48] = tex1Dfetch(texData1D, i2);
+    shm[txe +tye *48] = data[i1];
+    shm[txe+tye2*48] = data[i2];
 #endif
 
     //t3 = convolution_3x3_reg((kernel+18));
