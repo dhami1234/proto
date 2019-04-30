@@ -89,7 +89,7 @@ texture<int2 , 1, cudaReadModeElementType> texData1D;
 #endif
 
 cudaChannelFormatDesc floatTex;
-cudaExtent gridExtent;
+size_t gridExtent;
 
 cudaArray *cu_array;
 //cudaPitchedPtr p_T1, p_T2;
@@ -291,15 +291,15 @@ int bigTest(int argc, char*argv[])
   floatTex = cudaCreateChannelDesc<int2>();
 #endif
 
-  /* allocate alligned 3D data on the GPU */
-  gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
+  /* allocate 1D data on the GPU */
+  gridExtent = pitch*sizeof(mfloat)* pitchy* nz;
 
-  std::cout<< "grid extent depth = " << gridExtent.depth << ", height = "<< gridExtent.height << ", width = " << gridExtent.width << std::endl;
+  std::cout<< "grid extent = " << gridExtent << std::endl;
   printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
   printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
-  vector<cudaPitchedPtr> vec_p_T1(nbox);
-  vector<cudaPitchedPtr> vec_p_T2(nbox);
+  vector<void*> vec_p_T1(nbox);
+  vector<void*> vec_p_T2(nbox);
   vector<mfloat*> vec_h_T1(nbox);
   vector<mfloat*> vec_h_T2(nbox);
   vector<mfloat*> vec_d_T1(nbox);
@@ -308,11 +308,11 @@ int bigTest(int argc, char*argv[])
   for(int ibox = 0; ibox < nbox; ibox++)
   {
  
-    cutilSafeCall(cudaMalloc3D(&(vec_p_T1[ibox]), gridExtent));
-    cutilSafeCall(cudaMalloc3D(&(vec_p_T2[ibox]), gridExtent));
+    cutilSafeCall(cudaMalloc(&(vec_p_T1[ibox]), gridExtent));
+    cutilSafeCall(cudaMalloc(&(vec_p_T2[ibox]), gridExtent));
 
-    vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox].ptr);
-    vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
+    vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox]);
+    vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox]);
   }
 
   //set memory and allocate host data
@@ -325,7 +325,7 @@ int bigTest(int argc, char*argv[])
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
 
-    pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
+    pitch = sizeof(vec_p_T1[ibox])/sizeof(mfloat);
 
     cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
     cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
@@ -364,7 +364,7 @@ int bigTest(int argc, char*argv[])
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
 
-    pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
+    pitch = sizeof(vec_p_T1[ibox])/sizeof(mfloat);
     high_resolution_clock::time_point tstart = high_resolution_clock::now();
     for(int it=0; it<iters; it++)
     {
