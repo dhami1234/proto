@@ -564,6 +564,14 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
         int begin  = 0;
         int end    = a_box.size();
         int stride = a_box.size(0);
+        int thrdim_x = 32, thrdim_y = 6;
+        dim_3 block(thrdim_x, thrdim_y, 1);
+        dim_3 grid(stride / block.x, a_box.size(1) / block.y, 1);
+        if (stride % block.x)
+            grid.x++;
+        if (a_box.size(1) % block.y)
+            grid.y++;
+
         int blocks = a_box.flatten(0).size();
 
         T* d_srcPtr = (T*)srcbd.data();
@@ -580,9 +588,9 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
 
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
-        size_t shared_mem = 0;
+        size_t shared_mem = 2*block.x*block.y*sizeof(T);
         cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        stencilIndexer<<<blocks, stride, shared_mem, curstream>>>
+        stencilIndexer<<<block, grid, shared_mem, curstream>>>
           (begin, end,  ncoef, coefptr, offsetptr,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
@@ -647,6 +655,14 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
         int begin  = 0;
         int end    = a_box.size();
         int stride = a_box.size(0);
+        int thrdim_x = 32, thrdim_y = 6;
+        dim_3 block(thrdim_x, thrdim_y, 1);
+        dim_3 grid(stride / block.x, a_box.size(1) / block.y, 1);
+        if (stride % block.x)
+            grid.x++;
+        if (a_box.size(1) % block.y)
+            grid.y++;
+
         int blocks = a_box.flatten(0).size();
 
         T* d_srcPtr = (T*)srcbd.data();
@@ -663,8 +679,8 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
 
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
-        size_t shared_mem = 0;
-        stencilIndexer<<<blocks, stride, shared_mem, a_stream>>>
+        size_t shared_mem = 2*block.x*block.y*sizeof(T);
+        stencilIndexer<<<block, grid, shared_mem, a_stream>>>
           (begin, end,  ncoef, coefptr, offsetptr,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 

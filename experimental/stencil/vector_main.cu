@@ -79,8 +79,13 @@ mfloat h_kernel_3c_all[3*3*3] = {-1./12, -1./6, -1./12,
 				 -1./6 ,  0. , -1./6,
 				 -1./12, -1./6, -1./12};
 
+#define CONST
+#undef CONST
+#ifdef CONST
 __device__ __constant__ mfloat d_kernel_3c[3*3*3];
-
+#else
+__device__ mfloat d_kernel_3c[3*3*3];
+#endif
 
 #ifdef MSINGLE
 texture<float, 1, cudaReadModeElementType> texData1D;

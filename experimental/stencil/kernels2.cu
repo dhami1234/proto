@@ -39,7 +39,7 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
     r9=(shm)[tx+1+(ty+1)*bx];			\
   }						\
 
-__global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
+__global__ void stencil27_symm_exp(mfloat *out, mfloat a, mfloat b,
 				       uint dimx, uint dimy, uint dimz, uint pitch,
                                        uint pitchy, mfloat* in, 
 				       uint kstart, uint kend)
@@ -92,44 +92,7 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
   i1 = ixe+iye*pitch;
   i2 = ixe2+iye2*pitch;
 
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-#endif
-
-  __syncthreads();
-  //t1 = convolution_3x3(kernel, shm, tx+8, ty+1, bx);
-  // t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
-   t1 = stencil_3x3_function(C1, C2, C3, shm, tx+8, ty+1, bx);
-  __syncthreads();
-
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = tex1Dfetch(texData1D, i2); shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-#endif
-
-  __syncthreads();
-  //t2 = convolution_3x3(kernel, shm, tx+8, ty+1, bx);
-  //t1+= convolution_3x3(kernel+9, shm, tx+8, ty+1, bx);
-  t2 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
-  t1+= stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, bx);
-  __syncthreads();
-
   for(kk=kstart; kk<kend; kk++){
-
-    __syncthreads();
-
-    i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
 
 #ifndef MSINGLE
     v = in[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
@@ -140,18 +103,42 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
 #endif
 
     __syncthreads();
-    //t3 = convolution_3x3(kernel+18, shm, tx+8, ty+1, bx);
-    t3 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
+    t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
+    __syncthreads();
 
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
-    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, bx);
-    //t1 = t2 + convolution_3x3(kernel+9, shm, tx+8, ty+1, bx);
-    t2 = t3;
+#ifndef MSINGLE
+    v = in[i1 + pitch*pitchy]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+    v = in[i2 + pitch*pitchy]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *bx] = in[i1 + pitch*pitchy];
+    shm[txe2+tye2*bx] = in[i2 + pitch*pitchy];
+#endif
+
+    __syncthreads();
+    t2 = stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, bx);
+    __syncthreads();
+
+#ifndef MSINGLE
+    v = in[i1 + 2*pitch*pitchy]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+    v = in[i2 + 2*pitch*pitchy]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *bx] = in[i1 + 2*pitch*pitchy];
+    shm[txe2+tye2*bx] = in[i2 + 2*pitch*pitchy];
+#endif
+
+    __syncthreads();
+    t3 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
+    __syncthreads();
+
+    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t2 + t3;
+
+    i1 += pitch*pitchy;
+    i2 += pitch*pitchy;
   }
 }
 
 
-__global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
+__global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
 						uint dimx, uint dimy, uint dimz,
                                                 uint pitch, uint pitchy, mfloat* in, 
 						uint kstart, uint kend)
@@ -207,59 +194,8 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
 
   i1 = ixe+iye*pitch;
   i2 = ixe2+iye2*pitch;
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-#endif
 
-  __syncthreads();  
-  push_regs_exp(shm+8+bx, bx);  
-  __syncthreads();
-
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-#endif
-
-  //t1 = convolution_3x3_reg((kernel));
-  t1 = stencil_3x3_reg(C1, C2, C3);
-
-  __syncthreads();  
-  push_regs_exp(shm+8+bx, bx);  
-  __syncthreads();
-
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-#endif
-
-  //t2 = convolution_3x3_reg((kernel));
-  //t1+= convolution_3x3_reg((kernel+9));
-  t2 = stencil_3x3_reg(C1, C2, C3);
-  t1+= stencil_3x3_reg(C0, C1, C2);
-
-  for(kk=kstart; kk<kend-1; kk++){
-
-    __syncthreads();  
-    push_regs_exp(shm+8+bx, bx);  
-    __syncthreads();
-
-    i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
+  for(kk=kstart; kk<kend; kk++){
 
 #ifndef MSINGLE
     v = in[i1]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
@@ -269,27 +205,50 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
     shm[txe2+tye2*bx] = in[i2];
 #endif
 
-    //t3 = convolution_3x3_reg((kernel+18));
+    __syncthreads();  
+    push_regs_exp(shm+8+bx, bx);  
+    __syncthreads();
+
+    t1 = stencil_3x3_reg(C1, C2, C3);
+
+#ifndef MSINGLE
+    v = in[i1 + pitch*pitchy]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+    v = in[i2 + pitch*pitchy]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *bx] = in[i1 + pitch*pitchy];
+    shm[txe2+tye2*bx] = in[i2 + pitch*pitchy];
+#endif
+
+    __syncthreads();  
+    push_regs_exp(shm+8+bx, bx);  
+    __syncthreads();
+
+    t2 = stencil_3x3_reg(C0, C1, C2);
+
+#ifndef MSINGLE
+    v = in[i1 + 2*pitch*pitchy]; shm[txe +tye *bx] = __hiloint2double(v.y, v.x);
+    v = in[i2 + 2*pitch*pitchy]; shm[txe2+tye2*bx] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *bx] = in[i1 + 2*pitch*pitchy];
+    shm[txe2+tye2*bx] = in[i2 + 2*pitch*pitchy];
+#endif
+
+    __syncthreads();  
+    push_regs_exp(shm+8+bx, bx);  
+    __syncthreads();
+
     t3 = stencil_3x3_reg(C1, C2, C3);
 
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
-    //t1 = t2 + convolution_3x3_reg((kernel+9));
-    t1 = t2 + stencil_3x3_reg(C0, C1, C2);
-    t2 = t3;
+    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t2 + t3;
 
+    i1 += pitch*pitchy;
+    i2 += pitch*pitchy;
   }
-
-  __syncthreads();  
-  push_regs_exp(shm+8+bx, bx);  
-  __syncthreads();
-
-  //*out = t1 + convolution_3x3_reg((kernel+18));
-  out[ix + iy*pitch + kk*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
 }
 
 
 
-__global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
+__global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
 					   uint dimx, uint dimy, uint dimz,
                                            uint pitch, uint pitchy, mfloat* in, 
 					   uint kstart, uint kend)
@@ -336,65 +295,53 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
   uint kk;						
   extern __shared__ mfloat shm[];			
 
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
-#endif
-
-  __syncthreads();
-  //t1 = convolution_3x3(kernel, shm, tx+8, ty+1, 48);
-  t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, 48);
-  __syncthreads();
-
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
-#endif
-
-  __syncthreads();
-  //t2 = convolution_3x3(kernel, shm, tx+8, ty+1, 48);
-  //t1+= convolution_3x3(kernel+9, shm, tx+8, ty+1, 48);
-  t2 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, 48);
-  t1+= stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, 48);
-  __syncthreads();
-
   for(kk=kstart; kk<kend; kk++){
-
-    __syncthreads();
-
-    i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
 
 #ifndef MSINGLE
     v = in[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
     v = in[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
 #else
     shm[txe +tye *48] = in[i1];
-    shm[txe+tye2*48] = in[i2];
+    shm[txe +tye2*48] = in[i2];
+#endif
+
+  __syncthreads();
+  t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, 48);
+  __syncthreads();
+
+#ifndef MSINGLE
+    v = in[i1 + pitch*pitchy]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+    v = in[i2 + pitch*pitchy]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *48] = in[i1 + pitch*pitchy];
+    shm[txe +tye2*48] = in[i2 + pitch*pitchy];
+#endif
+
+  __syncthreads();
+  t2 = stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, 48);
+  __syncthreads();
+
+#ifndef MSINGLE
+    v = in[i1 + 2*pitch*pitchy]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+    v = in[i2 + 2*pitch*pitchy]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *48] = in[i1 + 2*pitch*pitchy];
+    shm[txe +tye2*48] = in[i2 + 2*pitch*pitchy];
 #endif
 
     __syncthreads();
-    //t3 = convolution_3x3(kernel+18, shm, tx+8, ty+1, 48);
     t3 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, 48);
+    __syncthreads();
 
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
-    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, 48);
-    //t1 = t2 + convolution_3x3(kernel+9, shm, tx+8, ty+1, 48);
-    t2 = t3;
+    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t2 + t3;
+
+    i1 += pitch*pitchy;
+    i2 += pitch*pitchy;
   }
 }
 
 
-__global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloat b,
+__global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
 						    uint dimx, uint dimy, uint dimz,
                                                     uint pitch, uint pitchy, mfloat* in, 
 						    uint kstart, uint kend)
@@ -445,60 +392,7 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
   uint kk;						
   extern __shared__ mfloat shm[];
 
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
-#endif
-
-  __syncthreads();  
-  push_regs_exp(shm+8+48, 48);  
-  __syncthreads();
-
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
-#endif
-
-  //t1 = convolution_3x3_reg((kernel));
-  t1 = stencil_3x3_reg(C1, C2, C3);
-
-  __syncthreads();  
-  push_regs_exp(shm+8+48, 48);  
-  __syncthreads();
-
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-
-#ifndef MSINGLE
-  v = in[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
-  v = in[i2]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
-#else
-  shm[txe +tye*48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
-#endif
-
-  //t2 = convolution_3x3_reg((kernel));
-  //t1+= convolution_3x3_reg((kernel+9));
-  t2 = stencil_3x3_reg(C1, C2, C3);
-  t1+= stencil_3x3_reg(C0, C1, C2);
-
-  for(kk=kstart; kk<kend-1; kk++){ // 1
-
-    __syncthreads();  
-    push_regs_exp(shm+8+48, 48);  
-    __syncthreads();
-
-    i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
+  for(kk=kstart; kk<kend; kk++){
 
 #ifndef MSINGLE
     v = in[i1]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
@@ -508,20 +402,49 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
     shm[txe+tye2*48] = in[i2];
 #endif
 
-    //t3 = convolution_3x3_reg((kernel+18));
-    // 13
+    __syncthreads();  
+    push_regs_exp(shm+8+48, 48);  
+    __syncthreads();
+
     t3 = stencil_3x3_reg(C1, C2, C3);
 
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3; // 2
-    //t1 = t2 + convolution_3x3_reg((kernel+9));
-    t1 = t2 + stencil_3x3_reg(C0, C1, C2);
-    t2 = t3; // 3
+#ifndef MSINGLE
+    v = in[i1 + pitch*pitchy]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+    v = in[i2 + pitch*pitchy]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *48] = in[i1 + pitch*pitchy];
+    shm[txe +tye2*48] = in[i2 + pitch*pitchy];
+#endif
+
+    __syncthreads();  
+    push_regs_exp(shm+8+48, 48);  
+    __syncthreads();
+
+    t3 = stencil_3x3_reg(C0, C1, C2);
+
+#ifndef MSINGLE
+    v = in[i1 + 2*pitch*pitchy]; shm[txe +tye *48] = __hiloint2double(v.y, v.x);
+    v = in[i2 + 2*pitch*pitchy]; shm[txe+tye2*48] = __hiloint2double(v.y, v.x);
+#else
+    shm[txe +tye *48] = in[i1 + 2*pitch*pitchy];
+    shm[txe +tye2*48] = in[i2 + 2*pitch*pitchy];
+#endif
+
+    __syncthreads();  
+    push_regs_exp(shm+8+48, 48);  
+    __syncthreads();
+
+    t3 = stencil_3x3_reg(C1, C2, C3);
+
+    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t2 + t3;
+
+    i1 += pitch*pitchy;
+    i2 += pitch*pitchy;
   }
 
   __syncthreads();  
   push_regs_exp(shm+8+48, 48);  
   __syncthreads();
 
-  //*out = t1 + convolution_3x3_reg((kernel+18));
   out[ix + iy*pitch + kk*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
 }
