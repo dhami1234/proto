@@ -53,10 +53,10 @@ __global__ void stencil27_symm_exp(mfloat *in, mfloat *out,
   const uint ti = threadIdx.y*blockDim.x + threadIdx.x;
   const uint pad = 32/sizeof(mfloat); // halos to left & right of interior require 32 byte memory transaction
   const uint bx= blockDim.x+2*pad;
-  const uint txe= ti%bx; // this thread's block-relative x-axis index for first read
-  const uint tye= ti/bx; // this thread's block-relative y-axis index for first read
-  const uint txe2= (ti+blockDim.x*blockDim.y)%bx; // because of halos, each thread reads two values
-  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
+  const uint txe= (ti+blockDim.x*blockDim.y)%bx; // this thread's block-relative x-axis index for first read
+  const uint tye= (ti+blockDim.x*blockDim.y)/bx; // this thread's block-relative y-axis index for first read
+  const uint txe2= (ti+1*(blockDim.x*blockDim.y))%bx; // because of halos, each thread reads two values per slice
+  const uint tye2= (ti+1*(blockDim.x*blockDim.y))/bx;
   int  ixe= blockIdx.x*blockDim.x + txe - pad; // this thread's global x-axis index for first read
   int  iye= blockIdx.y*blockDim.y + tye - 1;
   int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
@@ -83,48 +83,66 @@ __global__ void stencil27_symm_exp(mfloat *in, mfloat *out,
   C2 = kernel[1];
   C3 = kernel[0];
   uint i1, i2;
+  uint kk, k1, k2;
 
   cg::thread_block block = cg::this_thread_block();
-  extern __shared__ mfloat shm[];			
+  extern __shared__ mfloat sh1[];			
+  mfloat *sh2 = sh1 + 2*blockDim.x*blockDim.y;
+  mfloat *shm[2] = { sh1, sh2 };
+  mfloat s[4];
 
   i1 = ixe+iye*dimx;
   i2 = ixe2+iye2*dimy;
 
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-
-  block.sync();
-   t1 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, bx);
-  block.sync();
+  shm[1][txe +tye *bx] = in[i1]; // load and store slice 1
+  shm[1][txe2+tye2*bx] = in[i2];
 
   i1 += dimx*dimy;
   i2 += dimx*dimy;
-
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
+  s[2] = in[i1]; // load slice 2
+  s[3] = in[i2];
 
   block.sync();
-  t2 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, bx);
-  t1+= stencil_3x3(C0, C1, C2, shm, tx+pad, ty+1, bx);
+  shm[0][txe +tye *bx] = s[2]; // store slice 2
+  shm[0][txe2+tye2*bx] = s[3];
+
+  t1 = stencil_3x3(C1, C2, C3, shm[1], tx+pad, ty+1, bx); // compute slice 1
+  
+  i1 += dimx*dimy;
+  i2 += dimx*dimy;
+  s[0] = in[i1]; // load slice 3
+  s[1] = in[i2];
+
   block.sync();
+  shm[1][txe +tye *bx] = s[0]; // store slice 3
+  shm[1][txe +tye *bx] = s[1];
 
-  for(uint kk=kstart; kk<kend; kk++){
+  t2 = stencil_3x3(C1, C2, C3, shm[0], tx+pad, ty+1, bx); // compute slice 2
+  t1+= stencil_3x3(C0, C1, C2, shm[0], tx+pad, ty+1, bx);
 
-    block.sync();
+  for(kk=kstart; kk<kend-1; kk++){
+    k1 = kk%2;
+    k2 = (kk+1)%2;
 
     i1 += dimx*dimy;
     i2 += dimx*dimy;
 
-    shm[txe +tye *bx] = in[i1];
-    shm[txe2+tye2*bx] = in[i2];
+    s[k1*2+0] = in[i1]; // load next slice
+    s[k1*2+1] = in[i2];
 
     block.sync();
-    t3 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, bx);
+    shm[k1][txe +tye *bx] = s[k1*2+0]; // store next slice
+    shm[k1][txe2+tye2*bx] = s[k1*2+1];
+
+    t3 = stencil_3x3(C1, C2, C3, shm[k2], tx+pad, ty+1, bx); // compute last slice
 
     out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
-    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+pad, ty+1, bx);
+    t1 = t2 + stencil_3x3(C0, C1, C2, shm[k2], tx+pad, ty+1, bx);
     t2 = t3;
   }
+
+  t3 = stencil_3x3(C1, C2, C3, shm[(kk+1)%2], tx+pad, ty+1, bx);
+  out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
 }
 
 
