@@ -377,7 +377,7 @@ int bigTest(int argc, char*argv[])
           stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+          stencil27_symm_exp_prefetch<<<grid, block, 4*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else if(routine==3)
           stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>

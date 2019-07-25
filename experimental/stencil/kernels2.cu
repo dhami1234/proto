@@ -24,6 +24,18 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
   c1*(r2+r4+r6+r8) +							\
   c2*(r1+r3+r7+r9)
 
+#define FULL 0xffffffff
+__device__ inline void push_regs_3x3(mfloat *shm, mfloat *r, uint tx, uint ty, uint bx)
+{
+    r[0] = shm[tx+(ty-1)*bx];
+    r[3] = shm[tx+(ty+0)*bx];
+    r[6] = shm[tx+(ty+1)*bx];
+}
+
+__device__ inline mfloat calc_regs_3x3(mfloat *r, mfloat c0, mfloat c1, mfloat c2) {
+    return c0*r[4] + c1*(r[1]+r[3]+r[5]+r[7]) + c2*(r[0]+r[2]+r[6]+r[8]);
+}
+
 #define push_regs_exp(shm, bx)			\
   {						\
     r1=(shm)[tx-1+(ty-1)*bx];			\
@@ -133,7 +145,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
                                                 uint pitch, uint pitchy, mfloat* in, 
 						uint kstart, uint kend)
 {
-  mfloat r1, r2, r3, r4, r5, r6, r7, r8, r9;
+  mfloat r[9];
 
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
@@ -174,65 +186,128 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   C3 = kernel[0];
 
   uint i1, i2;
+  mfloat s[2];
 
   cg::thread_block block = cg::this_thread_block();						
-  extern __shared__ mfloat shm[];
+  extern __shared__ mfloat sh1[];
+  mfloat *sh2 = sh1 + 2*blockDim.x*blockDim.y;
+  mfloat *shm[2] = { sh1, sh2 };
 
   i1 = ixe+iye*pitch;
   i2 = ixe2+iye2*pitch;
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-
-  block.sync();  
-  push_regs_exp(shm+pad+bx, bx); // pad+bx accounts for halos on top and to left of interior's start 
-  block.sync();
+  shm[0][txe +tye *bx] = in[i1]; // load and store first slice
+  shm[0][txe2+tye2*bx] = in[i2];
 
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
-
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-
-  t1 = stencil_3x3_reg(C1, C2, C3);
-
-  block.sync();  
-  push_regs_exp(shm+pad+bx, bx);  
+  s[0] = in[i1]; // load second slice
+  s[1] = in[i2];
   block.sync();
+  push_regs_3x3(shm[0]+pad+bx, &r[1], tx, ty, bx); // push middle of first slice 
+  if (tx==0)
+      push_regs_3x3(shm[0]+pad+bx, &r[0], tx-1, ty, bx); // push block's left slice
+  if (tx==31)
+      push_regs_3x3(shm[0]+pad+bx, &r[2], tx+1, ty, bx); // push block's right slice
+  shm[1][txe +tye *bx] = s[0]; // store second slice
+  shm[1][txe2+tye2*bx] = s[1];
+  for (int i = 0; i < 3; i++) {
+      if (tx>0)
+          r[3*i+0] = r[3*i+1]; // used for shuffling
+      if (tx<31)
+          r[3*i+2] = r[3*i+1];
+  }
+  for (int i = 0; i < 3; i++) {
+      __shfl_down_sync(FULL, r[3*i+0], 1); // fill left halo slice
+      __shfl_up_sync(FULL, r[3*i+2], 1); // fill right halo slice
+  }
+  t1 = calc_regs_3x3(r, C1, C2, C3); // calculate fist slice
 
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
+  s[0] = in[i1];
+  s[1] = in[i2];
+  block.sync();
+  push_regs_3x3(shm[1]+pad+bx, &r[1], tx, ty, bx);
+  if (tx==0)
+      push_regs_3x3(shm[1]+pad+bx, &r[0], tx-1, ty, bx);
+  if (tx==31)
+      push_regs_3x3(shm[1]+pad+bx, &r[2], tx+1, ty, bx);
+  shm[0][txe +tye *bx] = s[0];
+  shm[0][txe2+tye2*bx] = s[1];
+  for (int i = 0; i < 3; i++) {
+      if (tx>0)
+          r[3*i+0] = r[3*i+1]; // used for shuffling
+      if (tx<31)
+          r[3*i+2] = r[3*i+1];
+  }
+  for (int i = 0; i < 3; i++) {
+      __shfl_down_sync(FULL, r[3*i+0], 1); // fill left halo slice
+      __shfl_up_sync(FULL, r[3*i+2], 1); // fill right halo slice
+  }
+  t2 = calc_regs_3x3(r, C1, C2, C3);
+  t1+= calc_regs_3x3(r, C0, C1, C2);
 
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-
-  t2 = stencil_3x3_reg(C1, C2, C3);
-  t1+= stencil_3x3_reg(C0, C1, C2);
-
+  uint j, k;
   for(uint kk=kstart; kk<kend-1; kk++){
-
-    block.sync();  
-    push_regs_exp(shm+pad+bx, bx);  
-    block.sync();
+    k = kk%2;
+    j = 1-k;
 
     i1 += pitch*pitchy;
     i2 += pitch*pitchy;
 
-    shm[txe +tye *bx] = in[i1];
-    shm[txe2+tye2*bx] = in[i2];
+    s[0] = in[i1];
+    s[1] = in[i2];
 
-    t3 = stencil_3x3_reg(C1, C2, C3);
+    block.sync();
+    push_regs_3x3(shm[j]+pad+bx, &r[1], tx, ty, bx);
+    if (tx==0)
+      push_regs_3x3(shm[j]+pad+bx, &r[0], tx-1, ty, bx);
+    if (tx==31)
+      push_regs_3x3(shm[j]+pad+bx, &r[2], tx+1, ty, bx);
+   
+    shm[k][txe +tye *bx] = s[0];
+    shm[k][txe2+tye2*bx] = s[1];
+   
+    for (int i = 0; i < 3; i++) {
+      if (tx>0)
+          r[3*i+0] = r[3*i+1]; // used for shuffling
+      if (tx<31)
+          r[3*i+2] = r[3*i+1];
+    }
+   
+    for (int i = 0; i < 3; i++) {
+      __shfl_down_sync(FULL, r[3*i+0], 1); // fill left halo slice
+      __shfl_up_sync(FULL, r[3*i+2], 1); // fill right halo slice
+    }
 
+    t3 = calc_regs_3x3(r, C1, C2, C3);
     out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
-    t1 = t2 + stencil_3x3_reg(C0, C1, C2);
+    t1 = t2 + calc_regs_3x3(r, C0, C1, C2);
     t2 = t3;
 
   }
 
   block.sync();  
-  push_regs_exp(shm+pad+bx, bx);  
-  block.sync();
+  push_regs_3x3(shm[k]+pad+bx, &r[1], tx, ty, bx);
+  if (tx==0)
+    push_regs_3x3(shm[k]+pad+bx, &r[0], tx-1, ty, bx);
+  if (tx==31)
+    push_regs_3x3(shm[k]+pad+bx, &r[2], tx+1, ty, bx);
+   
+  for (int i = 0; i < 3; i++) {
+    if (tx>0)
+        r[3*i+0] = r[3*i+1]; // used for shuffling
+    if (tx<31)
+        r[3*i+2] = r[3*i+1];
+  }
+   
+  for (int i = 0; i < 3; i++) {
+    __shfl_down_sync(FULL, r[3*i+0], 1); // fill left halo slice
+    __shfl_up_sync(FULL, r[3*i+2], 1); // fill right halo slice
+  }
 
-  out[ix + iy*pitch + (kend-1)*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
+  t3 = calc_regs_3x3(r, C1, C2, C3);
+  out[ix + iy*pitch + (kend-1)*pitch*pitchy] = t1 + t3;
 }
 
 
