@@ -27,7 +27,10 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
 __device__ inline void push_regs_3x3(mfloat *shm, mfloat *r, uint tx, uint ty, uint bx)
 {
     r[0] = shm[tx+(ty-1)*bx];
-    r[3] = shm[tx+(ty+0)*bx];
+    if (tx<16) // ensures all reads are from same bank
+        r[3] = shm[tx+16+ty*bx];
+    else
+        r[3] = shm[tx-16+ty*bx];
     r[6] = shm[tx+(ty+1)*bx];
 }
 
@@ -154,25 +157,30 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   const uint ti = threadIdx.y*blockDim.x + threadIdx.x;
   const uint pad = 32/sizeof(mfloat);
   const uint bx= blockDim.x+2*pad;
-  const uint txe= ti%bx;
-  const uint tye= ti/bx;
-  const uint txe2= (ti+blockDim.x*blockDim.y)%bx;
-  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
+  const uint txe= (2*ti)%bx; // x-coordinate of float2 read
+  const uint tye= (2*ti)/bx; // y-coordinate of float2 read
+  const uint wi = ty*2*32 + tx;
+  const uint wxe= wi%bx; // x-coordinate of first shmem write
+  const uint wye= wi/bx; // y-coordinate of first shmem write
+  const uint wxe2= (wi+32)%bx; // x-coordinate of 2nd shmem write
+  const uint wye2= (wi+32)/bx; // y-coordinate of 2nd shmem write
+//  const uint txe2= (ti+blockDim.x*blockDim.y)%bx;
+//  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
   int  ixe= blockIdx.x*blockDim.x + txe - pad;
   int  iye= blockIdx.y*blockDim.y + tye - 1;
-  int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
-  int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
+//  int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
+//  int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
 
   // periodicity
   if(ixe<0)       ixe  += dimx;
   if(ixe>dimx-1)  ixe  -= dimx;
-  if(ixe2<0)      ixe2 += dimx;
-  if(ixe2>dimx-1) ixe2 -= dimx;
+//  if(ixe2<0)      ixe2 += dimx;
+//  if(ixe2>dimx-1) ixe2 -= dimx;
 
   if(iye<0)       iye  += dimy;
   if(iye>dimy-1)  iye  -= dimy;
-  if(iye2<0)      iye2 += dimy;
-  if(iye2>dimy-1) iye2 -= dimy;
+//  if(iye2<0)      iye2 += dimy;
+//  if(iye2>dimy-1) iye2 -= dimy;
 
   mfloat t1 = 0;
   mfloat t2 = 0;
@@ -184,58 +192,74 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   C2 = kernel[1];
   C3 = kernel[0];
 
-  uint i1, i2;
-  mfloat s[2];
+  uint i1; //, i2;
+//  mfloat s[2];
+  float2 read;
 
   cg::thread_block block = cg::this_thread_block();						
   cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
   extern __shared__ mfloat sh1[];
-  mfloat *sh2 = sh1 + 2*blockDim.x*blockDim.y;
+  mfloat *sh2 = sh1 + 2*blockDim.x*blockDim.y; // offset by one slice of data
   mfloat *shm[2] = { sh1, sh2 };
 
   i1 = ixe+iye*pitch;
-  i2 = ixe2+iye2*pitch;
-  shm[0][txe +tye *bx] = in[i1]; // load and store first slice
-  shm[0][txe2+tye2*bx] = in[i2];
+//  i2 = ixe2+iye2*pitch;
+  read = reinterpret_cast<float2*>(in)[i1]; // reads 8 contiguous bytes of data
+//  shm[0][txe +tye *bx] = in[i1]; // load and store first slice
+//  shm[0][txe2+tye2*bx] = in[i2];
+  if (warp.thread_rank() < 16) // get first value from higher-ranked thread
+    read.y = warp.shfl_xor(read.x, 16);
+  else // get second value from lower-ranked thread
+    read.x = warp.shfl_xor(read.y, 16);
+  shm[0][wxe +wye *bx] = read.x; // read's two values should be in same lane
+  shm[0][wxe2+wye2*bx] = read.y;
 
   i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-  s[0] = in[i1]; // load second slice
-  s[1] = in[i2];
+//  i2 += pitch*pitchy;
+  read = reinterpret_cast<float2*>(in)[i1]; // load second slice
+//  s[0] = in[i1];
+//  s[1] = in[i2];
   block.sync();
   push_regs_3x3(shm[0]+pad+bx, &r[1], tx, ty, bx); // push middle of first slice 
-  for (int i = 0; i < 3; i++)
-      r[3*i+0] = r[3*i+2] = r[3*i+1]; // used for shuffling
-  for (int i = 0; i < 3; i++) {
-      warp.shfl_up(r[3*i+0], 1); // fill left halo slice
-      warp.shfl_down(r[3*i+2], 1); // fill right halo slice
-  }
+  r[4] = warp.shfl_xor(r[4], 16); // thread gets its correct center value
   if (tx==0)
       push_regs_3x3(shm[0]+pad+bx, &r[0], tx-1, ty, bx); // push block's left slice
   if (tx==31)
       push_regs_3x3(shm[0]+pad+bx, &r[2], tx+1, ty, bx); // push block's right slice
-  shm[1][txe +tye *bx] = s[0]; // store second slice
-  shm[1][txe2+tye2*bx] = s[1];
+  if (warp.thread_rank() < 16)
+    read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
+  else
+    read.x = warp.shfl_xor(read.y, 16);
+  shm[1][wxe +wye *bx] = read.x; // store second slice
+  shm[1][wxe2+wye2*bx] = read.y;
+  for (int i = 0; i < 3; i++) {
+      r[3*i+0] = warp.shfl_up(r[3*i+1], 1); // fill left halo slice
+      r[3*i+2] = warp.shfl_down(r[3*i+1], 1); // fill right halo slice
+  }
   t1 = calc_regs_3x3(r, C1, C2, C3); // calculate fist slice
 
   i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
-  s[0] = in[i1];
-  s[1] = in[i2];
+//  i2 += pitch*pitchy;
+  read = reinterpret_cast<float2*>(in)[i1];
+//  s[0] = in[i1];
+//  s[1] = in[i2];
   block.sync();
   push_regs_3x3(shm[1]+pad+bx, &r[1], tx, ty, bx);
-  for (int i = 0; i < 3; i++)
-      r[3*i+0] = r[3*i+2] = r[3*i+1]; // used for shuffling
-  for (int i = 0; i < 3; i++) {
-      warp.shfl_up(r[3*i+0], 1); // fill left halo slice
-      warp.shfl_down(r[3*i+2], 1); // fill right halo slice
-  }
+  r[4] = warp.shfl_xor(r[4], 16);
   if (tx==0)
       push_regs_3x3(shm[1]+pad+bx, &r[0], tx-1, ty, bx);
   if (tx==31)
       push_regs_3x3(shm[1]+pad+bx, &r[2], tx+1, ty, bx);
-  shm[0][txe +tye *bx] = s[0];
-  shm[0][txe2+tye2*bx] = s[1];
+  if (warp.thread_rank() < 16)
+    read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
+  else
+    read.x = warp.shfl_xor(read.y, 16);
+  shm[0][wxe +wye *bx] = read.x; // store second slice
+  shm[0][wxe2+wye2*bx] = read.y;
+  for (int i = 0; i < 3; i++) {
+      r[3*i+0] = warp.shfl_up(r[3*i+1], 1); // fill left halo slice
+      r[3*i+2] = warp.shfl_down(r[3*i+1], 1); // fill right halo slice
+  }
   t2 = calc_regs_3x3(r, C1, C2, C3);
   t1+= calc_regs_3x3(r, C0, C1, C2);
 
@@ -243,28 +267,31 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   for(kk=kstart; kk<kend-1; kk++){
 
     i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
-
-    s[0] = in[i1];
-    s[1] = in[i2];
+//    i2 += pitch*pitchy;
+    read = reinterpret_cast<float2*>(in)[i1];
+//    s[0] = in[i1];
+//    s[1] = in[i2];
 
     block.sync();
     push_regs_3x3(shm[j]+pad+bx, &r[1], tx, ty, bx);
-    for (int i = 0; i < 3; i++)
-      r[3*i+0] = r[3*i+2] = r[3*i+1]; // used for shuffling
-   
-    for (int i = 0; i < 3; i++) {
-      warp.shfl_up(r[3*i+0], 1); // fill left halo slice
-      warp.shfl_down(r[3*i+2], 1); // fill right halo slice
-    }
-
+    r[4] = warp.shfl_xor(r[4], 16);
     if (tx==0)
       push_regs_3x3(shm[j]+pad+bx, &r[0], tx-1, ty, bx);
     if (tx==31)
       push_regs_3x3(shm[j]+pad+bx, &r[2], tx+1, ty, bx);
    
-    shm[k][txe +tye *bx] = s[0];
-    shm[k][txe2+tye2*bx] = s[1];
+    if (warp.thread_rank() < 16)
+      read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
+    else
+      read.x = warp.shfl_xor(read.y, 16);
+
+    shm[k][wxe +wye *bx] = read.x; // store second slice
+    shm[k][wxe2+wye2*bx] = read.y;
+
+    for (int i = 0; i < 3; i++) {
+      r[3*i+0] = warp.shfl_up(r[3*i+1], 1); // fill left halo slice
+      r[3*i+2] = warp.shfl_down(r[3*i+1], 1); // fill right halo slice
+    }
 
     t3 = calc_regs_3x3(r, C1, C2, C3);
     out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
@@ -276,19 +303,17 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
 
   block.sync();  
   push_regs_3x3(shm[j]+pad+bx, &r[1], tx, ty, bx);
-  for (int i = 0; i < 3; i++)
-      r[3*i+0] = r[3*i+2] = r[3*i+1]; // used for shuffling
-   
-  for (int i = 0; i < 3; i++) {
-    warp.shfl_up(r[3*i+0], 1); // fill left halo slice
-    warp.shfl_down(r[3*i+2], 1); // fill right halo slice
-  }
-
+  r[4] = warp.shfl_xor(r[4], 16);
   if (tx==0)
     push_regs_3x3(shm[j]+pad+bx, &r[0], tx-1, ty, bx);
   if (tx==31)
     push_regs_3x3(shm[j]+pad+bx, &r[2], tx+1, ty, bx);
    
+  for (int i = 0; i < 3; i++) {
+    r[3*i+0] = warp.shfl_up(r[3*i+1], 1); // fill left halo slice
+    r[3*i+1] = warp.shfl_down(r[3*i+1], 1); // fill right halo slice
+  }
+
   t3 = calc_regs_3x3(r, C1, C2, C3);
   out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
 }
