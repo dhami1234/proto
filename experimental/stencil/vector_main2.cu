@@ -232,7 +232,7 @@ int bigTest(int argc, char*argv[])
   // thrdim_y = 6 makes it so that the number of interior values that a block uses is
   // a multiple of the number of halo values used. See Krotiewski p. 539
   // M * (BX+2 + 2*(BY+2)*8) = BX*BY --> if M = 1 and BX = 32, BY = 6
-  int routine = 1, thrdim_x = 32, thrdim_y = 6;
+  int routine = 2, thrdim_x = 32, thrdim_y = 6;
   int nstream = 8;
   int nbox = 128;
   /* -------------------- */
@@ -378,17 +378,16 @@ int bigTest(int argc, char*argv[])
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==2)
           stencil27_symm_exp_prefetch<<<grid, block, 4*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
+            (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==3)
           stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
+            (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else
           stencil27_symm_exp_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
+            (d_T1, d_T2, nx, ny, nz, kstart, kstop);
       
     }
     /* finalize */
-    // 
     //unsigned long long int numflops = 2*iters*27*nx*ny*nz;
  
   }
@@ -399,8 +398,8 @@ int bigTest(int argc, char*argv[])
   long long nptsperbox = nx*ny*nz;
   long long flops =  2*iters*27*(nptsperbox)*nbox;
   double tera_flop_rate = flops/microseconds/1.0e6;
-  std::cout << "nx = "<< nx << ",ny= " << ny << ",nz= " << nz << ",nbox=" << nbox << ",iters = " << iters << std::endl;
-  std::cout << "time = "<< microseconds << "mu s, num ops= " << flops << ", flop rate = " << std::fixed << tera_flop_rate << "TFlops"  << std::endl;
+  std::cout << "nx = " << nx << ",ny= " << ny << ",nz= " << nz << ",nbox=" << nbox << ",iters = " << iters << std::endl;
+  std::cout << "time = " << microseconds << "mu s, num ops= " << flops << ", flop rate = " << std::fixed << tera_flop_rate << "TFlops"  << std::endl;
 //  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */

@@ -55,9 +55,7 @@ __device__ inline mfloat calc_regs_3x3(mfloat *r, mfloat c0, mfloat c1, mfloat c
 
 namespace cg = cooperative_groups;
 
-__global__ void stencil27_symm_exp(mfloat *in, mfloat *out, 
-				       uint dimx, uint dimy, uint dimz, 
-				       uint kstart, uint kend)
+__global__ void stencil27_symm_exp(mfloat *in, mfloat *out, uint dimx, uint dimy, uint dimz, uint kstart, uint kend)
 {
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
@@ -142,10 +140,7 @@ __global__ void stencil27_symm_exp(mfloat *in, mfloat *out,
 }
 
 
-__global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
-						uint dimx, uint dimy, uint dimz,
-                                                uint pitch, uint pitchy, mfloat* in, 
-						uint kstart, uint kend)
+__global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, uint dimy, uint dimz, uint kstart, uint kend)
 {
   mfloat r[9];
 
@@ -202,8 +197,8 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   mfloat *sh2 = sh1 + 2*blockDim.x*blockDim.y; // offset by one slice of data
   mfloat *shm[2] = { sh1, sh2 };
 
-  i1 = ixe+iye*pitch;
-//  i2 = ixe2+iye2*pitch;
+  i1 = ixe+iye*dimx;
+//  i2 = ixe2+iye2*dimx;
   read = reinterpret_cast<float2*>(in)[i1]; // reads 8 contiguous bytes of data
 //  shm[0][txe +tye *bx] = in[i1]; // load and store first slice
 //  shm[0][txe2+tye2*bx] = in[i2];
@@ -214,8 +209,8 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   shm[0][wxe +wye *bx] = read.x; // read's two values should be in same lane
   shm[0][wxe2+wye2*bx] = read.y;
 
-  i1 += pitch*pitchy;
-//  i2 += pitch*pitchy;
+  i1 += dimx*dimy;
+//  i2 += dimx*dimy;
   read = reinterpret_cast<float2*>(in)[i1]; // load second slice
 //  s[0] = in[i1];
 //  s[1] = in[i2];
@@ -238,8 +233,8 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   }
   t1 = calc_regs_3x3(r, C1, C2, C3); // calculate fist slice
 
-  i1 += pitch*pitchy;
-//  i2 += pitch*pitchy;
+  i1 += dimx*dimy;
+//  i2 += dimx*dimy;
   read = reinterpret_cast<float2*>(in)[i1];
 //  s[0] = in[i1];
 //  s[1] = in[i2];
@@ -266,8 +261,8 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   uint j=0, k=1, kk;
   for(kk=kstart; kk<kend-1; kk++){
 
-    i1 += pitch*pitchy;
-//    i2 += pitch*pitchy;
+    i1 += dimx*dimy;
+//    i2 += dimx*dimy;
     read = reinterpret_cast<float2*>(in)[i1];
 //    s[0] = in[i1];
 //    s[1] = in[i2];
@@ -294,7 +289,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
     }
 
     t3 = calc_regs_3x3(r, C1, C2, C3);
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
+    out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
     t1 = t2 + calc_regs_3x3(r, C0, C1, C2);
     t2 = t3;
 
@@ -315,14 +310,11 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   }
 
   t3 = calc_regs_3x3(r, C1, C2, C3);
-  out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
+  out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
 }
 
 
-__global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
-					   uint dimx, uint dimy, uint dimz,
-                                           uint pitch, uint pitchy, mfloat* in, 
-					   uint kstart, uint kend)
+__global__ void stencil27_symm_exp_new(mfloat *in, mfloat *out, uint dimx, uint dimy, uint dimz, uint kstart, uint kend)
 {
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
@@ -349,8 +341,8 @@ __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
 
   uint i1, i2;
   
-  i1 = ixe+iye*pitch ;
-  i2 = ixe+iye2*pitch ;
+  i1 = ixe+iye*dimx ;
+  i2 = ixe+iye2*dimx ;
 
   mfloat t1 = 0;
   mfloat t2 = 0;
@@ -372,8 +364,8 @@ __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
   t1 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, width);
   block.sync();
 
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
+  i1 += dimx*dimy;
+  i2 += dimx*dimy;
 
   shm[txe +tye *width] = in[i1];
   shm[txe+tye2*width] = in[i2];
@@ -387,8 +379,8 @@ __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
 
     block.sync();
 
-    i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
+    i1 += dimx*dimy;
+    i2 += dimx*dimy;
 
     shm[txe +tye *width] = in[i1];
     shm[txe+tye2*width] = in[i2];
@@ -396,17 +388,14 @@ __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
     block.sync();
     t3 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, width);
 
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
+    out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
     t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+pad, ty+1, width);
     t2 = t3;
   }
 }
 
 
-__global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
-						    uint dimx, uint dimy, uint dimz,
-                                                    uint pitch, uint pitchy, mfloat* in, 
-						    uint kstart, uint kend)
+__global__ void stencil27_symm_exp_prefetch_new(mfloat *in, mfloat *out, uint dimx, uint dimy, uint dimz, uint kstart, uint kend)
 {
   mfloat r1, r2, r3, r4, r5, r6, r7, r8, r9;
 
@@ -435,8 +424,8 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
 
   uint i1, i2;
   
-  i1 = ixe+iye*pitch ;
-  i2 = ixe+iye2*pitch ;
+  i1 = ixe+iye*dimx ;
+  i2 = ixe+iye2*dimx ;
 
   mfloat t1 = 0;
   mfloat t2 = 0;
@@ -458,8 +447,8 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
   push_regs_exp(shm+pad+width, width);  
   block.sync();
 
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
+  i1 += dimx*dimy;
+  i2 += dimx*dimy;
 
   shm[txe +tye *width] = in[i1];
   shm[txe+tye2*width] = in[i2];
@@ -470,8 +459,8 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
   push_regs_exp(shm+pad+width, width);  
   block.sync();
 
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
+  i1 += dimx*dimy;
+  i2 += dimx*dimy;
 
   shm[txe +tye*width] = in[i1];
   shm[txe+tye2*width] = in[i2];
@@ -485,15 +474,15 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
     push_regs_exp(shm+pad+width, width);  
     block.sync();
 
-    i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
+    i1 += dimx*dimy;
+    i2 += dimx*dimy;
 
     shm[txe +tye *width] = in[i1];
     shm[txe+tye2*width] = in[i2];
 
     t3 = stencil_3x3_reg(C1, C2, C3);
 
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
+    out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
     t1 = t2 + stencil_3x3_reg(C0, C1, C2);
     t2 = t3;
   }
@@ -502,5 +491,5 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
   push_regs_exp(shm+pad+width, width);  
   block.sync();
 
-  out[ix + iy*pitch + (kend-1)*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
+  out[ix + iy*dimx + (kend-1)*dimx*dimy] = t1 + stencil_3x3_reg(C1, C2, C3);
 }
