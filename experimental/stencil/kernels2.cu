@@ -24,7 +24,7 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
   c1*(r2+r4+r6+r8) +							\
   c2*(r1+r3+r7+r9)
 
-__device__ inline void push_regs_3x3(mfloat *shm, mfloat *r, uint tx, uint ty, uint bx)
+__device__ void push_regs_3x3(mfloat *shm, mfloat *r, uint tx, uint ty, uint bx)
 {
     r[0] = shm[tx+(ty-1)*bx];
     if (tx<16) // ensures all reads are from same bank
@@ -146,23 +146,23 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
 
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
-  const  int ix = blockIdx.x*blockDim.x + threadIdx.x;	
-  const  int iy = blockIdx.y*blockDim.y + threadIdx.y;
+  const  int ix = blockIdx.x*blockDim.x + threadIdx.x; // global x index
+  const  int iy = blockIdx.y*blockDim.y + threadIdx.y; // global y index
 
-  const uint ti = threadIdx.y*blockDim.x + threadIdx.x;
+  const uint ti = threadIdx.y*blockDim.x + threadIdx.x; // local 2D index
   const uint pad = 32/sizeof(mfloat);
   const uint bx= blockDim.x+2*pad;
-  const uint txe= (2*ti)%bx; // x-coordinate of float2 read
-  const uint tye= (2*ti)/bx; // y-coordinate of float2 read
-  const uint wi = ty*2*32 + tx;
+  const uint txe= (2*ti)%bx; // local x-coordinate of float2 read in padded space
+  const uint tye= (2*ti)/bx; // local y-coordinate of float2 read in padded space
+  const uint wi = ty*2*32 + tx; // 2D index of first shmem write
   const uint wxe= wi%bx; // x-coordinate of first shmem write
   const uint wye= wi/bx; // y-coordinate of first shmem write
   const uint wxe2= (wi+32)%bx; // x-coordinate of 2nd shmem write
   const uint wye2= (wi+32)/bx; // y-coordinate of 2nd shmem write
 //  const uint txe2= (ti+blockDim.x*blockDim.y)%bx;
 //  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
-  int  ixe= blockIdx.x*blockDim.x + txe - pad;
-  int  iye= blockIdx.y*blockDim.y + tye - 1;
+  int  ixe= blockIdx.x*blockDim.x + txe - pad; // global x-coordinate of float2 read in unpadded space
+  int  iye= blockIdx.y*blockDim.y + tye - 1; // global y-coordinate of float2 read in unpadded space
 //  int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
 //  int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
 
@@ -194,7 +194,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   cg::thread_block block = cg::this_thread_block();						
   cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
   extern __shared__ mfloat sh1[];
-  mfloat *sh2 = sh1 + 2*blockDim.x*blockDim.y; // offset by one slice of data
+  mfloat *sh2 = sh1 + 2*blockDim.x*blockDim.y; // offset by one slice of padded data (same as bx*8)
   mfloat *shm[2] = { sh1, sh2 };
 
   i1 = ixe+iye*dimx;
@@ -215,7 +215,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
 //  s[0] = in[i1];
 //  s[1] = in[i2];
   block.sync();
-  push_regs_3x3(shm[0]+pad+bx, &r[1], tx, ty, bx); // push middle of first slice 
+  push_regs_3x3(shm[0]+pad+bx, &(r[1]), tx, ty, bx); // push middle of first slice 
   r[4] = warp.shfl_xor(r[4], 16); // thread gets its correct center value
   if (tx==0)
       push_regs_3x3(shm[0]+pad+bx, &r[0], tx-1, ty, bx); // push block's left slice

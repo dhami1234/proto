@@ -39,10 +39,11 @@
 #include <vector_types.h>
 #include <vector_functions.h>
 #include <cooperative_groups.h>
+#include <cuda_profiler_api.h>
 
-#define HERE fprintf(stderr, "HERE %d\n", __LINE__)
+#define HERE fprintf(stderr, "HERE %d\n", __LINE__);
 #define MSINGLE
-#undef MSINGLE
+//#undef MSINGLE
 #ifdef MSINGLE
 typedef float mfloat;
 #else
@@ -83,7 +84,7 @@ mfloat h_kernel_3c_all[3*3*3] = {-1./12, -1./6, -1./12,
 __device__ __constant__ mfloat d_kernel_3c[3*3*3];
 
 
-cudaExtent gridExtent;
+//cudaExtent gridExtent;
 
 cudaArray *cu_array;
 //cudaPitchedPtr p_T1, p_T2;
@@ -277,9 +278,9 @@ int bigTest(int argc, char*argv[])
   /* -------------------- */
 
   /* allocate alligned 3D data on the GPU */
-  gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
+  //gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
 
-  std::cout<< "grid extent depth = " << gridExtent.depth << ", height = "<< gridExtent.height << ", width = " << gridExtent.width << std::endl;
+  //std::cout<< "grid extent depth = " << gridExtent.depth << ", height = "<< gridExtent.height << ", width = " << gridExtent.width << std::endl;
   printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
   printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
@@ -294,7 +295,7 @@ int bigTest(int argc, char*argv[])
   int patchSize=nx*ny*nz*sizeof(mfloat);
   cudaMalloc(&workspace1, nbox*patchSize);
   cudaMalloc(&workspace2, nbox*patchSize);
-  
+
   for(int ibox = 0; ibox < nbox; ibox++)
   {
  
@@ -309,11 +310,10 @@ int bigTest(int argc, char*argv[])
 
   //set memory and allocate host data
   mfloat* h_T1;
-  cudaMallocHost(&h_T1, patchSize);
+  cutilSafeCall(cudaMallocHost(&h_T1, patchSize));
   srand(1);
   for(long i=0; i<pitch*pitchy*nz; i++) 
-    h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
-
+    h_T1[i] = 1.0 - 2.0*(mfloat)(rand()/RAND_MAX);
   copy_cube_simple(vec_d_T1[0], h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
   cudaDeviceSynchronize();
   for(int ibox = 1; ibox < nbox; ibox++)
@@ -357,12 +357,14 @@ int bigTest(int argc, char*argv[])
   int kstart = 1;
   int kstop = nz-1;
  
+  cudaError_t sync, async;
+
   high_resolution_clock::time_point time_start = high_resolution_clock::now(); 
 
   for(int ibox = 0; ibox < nbox; ibox++)
   {
  
-    int istream = ibox%nstream;
+    //int istream = ibox%nstream;
 
     mfloat* h_T1 = vec_h_T1[ibox];
     mfloat* h_T2 = vec_h_T2[ibox];
@@ -372,7 +374,7 @@ int bigTest(int argc, char*argv[])
     for(int it=0; it<iters; it++)
     {
 
- 
+    int istream = (ibox*iters + it) % nstream; 
         if(routine==1)
           stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
@@ -391,7 +393,12 @@ int bigTest(int argc, char*argv[])
     //unsigned long long int numflops = 2*iters*27*nx*ny*nz;
  
   }
-  cudaDeviceSynchronize();
+  sync = cudaGetLastError();  
+  if (sync != cudaSuccess)
+      std::cout << "SYNCHRONOUS ERROR: " << cudaGetErrorString(sync) << std::endl;
+  async = cudaDeviceSynchronize();
+  if (async != cudaSuccess)
+      std::cout << "ASYNCHRONOUS ERROR: " << cudaGetErrorString(async) << std::endl;
   high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
   duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
   double microseconds = 1.0e6*(time_span.count());
@@ -421,11 +428,11 @@ int bigTest(int argc, char*argv[])
 
 int main(int argc, char*argv[])
 {
-
+cudaProfilerStart();
   
   int retval = bigTest(argc, argv);
 
-
-
+cudaProfilerStop();
+cudaDeviceReset();
   return retval;
 }
