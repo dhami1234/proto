@@ -215,7 +215,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
 //  s[0] = in[i1];
 //  s[1] = in[i2];
   block.sync();
-  push_regs_3x3(shm[0]+pad+bx, &(r[1]), tx, ty, bx); // push middle of first slice 
+  push_regs_3x3(shm[0]+pad+bx, &r[1], tx, ty, bx); // push middle of first slice 
   r[4] = warp.shfl_xor(r[4], 16); // thread gets its correct center value
   if (tx==0)
       push_regs_3x3(shm[0]+pad+bx, &r[0], tx-1, ty, bx); // push block's left slice
