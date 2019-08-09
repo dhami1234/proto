@@ -24,14 +24,14 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
   c1*(r2+r4+r6+r8) +							\
   c2*(r1+r3+r7+r9)
 
-__device__ void push_regs_3x3(mfloat *shm, mfloat *r, uint tx, uint ty, uint bx)
+__device__ inline void push_regs_3x3(mfloat *shm, mfloat *r, uint tx, uint ty, uint bx)
 {
-    r[0] = shm[tx+(ty-1)*bx];
+    r[0] = shm[tx+ty*bx];
     if (tx<16) // ensures all reads are from same bank
-        r[3] = shm[tx+16+ty*bx];
+        r[3] = shm[tx+16+(ty+1)*bx];
     else
-        r[3] = shm[tx-16+ty*bx];
-    r[6] = shm[tx+(ty+1)*bx];
+        r[3] = shm[tx-16+(ty+1)*bx];
+    r[6] = shm[tx+(ty+2)*bx];
 }
 
 __device__ inline mfloat calc_regs_3x3(mfloat *r, mfloat c0, mfloat c1, mfloat c2) {
@@ -155,8 +155,8 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   const uint txe= (2*ti)%bx; // local x-coordinate of float2 read in padded space
   const uint tye= (2*ti)/bx; // local y-coordinate of float2 read in padded space
   const uint wi = ty*2*32 + tx; // 2D index of first shmem write
-  const uint wxe= wi%bx; // x-coordinate of first shmem write
-  const uint wye= wi/bx; // y-coordinate of first shmem write
+  const uint wxe= wi%bx; // x-coordinate of 1st shmem write
+  const uint wye= wi/bx; // y-coordinate of 1st shmem write
   const uint wxe2= (wi+32)%bx; // x-coordinate of 2nd shmem write
   const uint wye2= (wi+32)/bx; // y-coordinate of 2nd shmem write
 //  const uint txe2= (ti+blockDim.x*blockDim.y)%bx;
@@ -199,7 +199,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
 
   i1 = ixe+iye*dimx;
 //  i2 = ixe2+iye2*dimx;
-  read = reinterpret_cast<float2*>(in)[i1]; // reads 8 contiguous bytes of data
+  read = reinterpret_cast<float2*>(in)[i1/2]; // reads 8 contiguous bytes of data
 //  shm[0][txe +tye *bx] = in[i1]; // load and store first slice
 //  shm[0][txe2+tye2*bx] = in[i2];
   if (warp.thread_rank() < 16) // get first value from higher-ranked thread
@@ -211,16 +211,16 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
 
   i1 += dimx*dimy;
 //  i2 += dimx*dimy;
-  read = reinterpret_cast<float2*>(in)[i1]; // load second slice
+  read = reinterpret_cast<float2*>(in)[i1/2]; // load second slice
 //  s[0] = in[i1];
 //  s[1] = in[i2];
   block.sync();
-  push_regs_3x3(shm[0]+pad+bx, &r[1], tx, ty, bx); // push middle of first slice 
+  push_regs_3x3(shm[0]+pad, &r[1], tx, ty, bx); // push middle of first slice 
   r[4] = warp.shfl_xor(r[4], 16); // thread gets its correct center value
   if (tx==0)
-      push_regs_3x3(shm[0]+pad+bx, &r[0], tx-1, ty, bx); // push block's left slice
+      push_regs_3x3(shm[0]+pad, &r[0], tx-1, ty, bx); // push block's left slice
   if (tx==31)
-      push_regs_3x3(shm[0]+pad+bx, &r[2], tx+1, ty, bx); // push block's right slice
+      push_regs_3x3(shm[0]+pad, &r[2], tx+1, ty, bx); // push block's right slice
   if (warp.thread_rank() < 16)
     read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
   else
@@ -235,16 +235,16 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
 
   i1 += dimx*dimy;
 //  i2 += dimx*dimy;
-  read = reinterpret_cast<float2*>(in)[i1];
+  read = reinterpret_cast<float2*>(in)[i1/2];
 //  s[0] = in[i1];
 //  s[1] = in[i2];
   block.sync();
-  push_regs_3x3(shm[1]+pad+bx, &r[1], tx, ty, bx);
+  push_regs_3x3(shm[1]+pad, &r[1], tx, ty, bx);
   r[4] = warp.shfl_xor(r[4], 16);
   if (tx==0)
-      push_regs_3x3(shm[1]+pad+bx, &r[0], tx-1, ty, bx);
+      push_regs_3x3(shm[1]+pad, &r[0], tx-1, ty, bx);
   if (tx==31)
-      push_regs_3x3(shm[1]+pad+bx, &r[2], tx+1, ty, bx);
+      push_regs_3x3(shm[1]+pad, &r[2], tx+1, ty, bx);
   if (warp.thread_rank() < 16)
     read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
   else
@@ -263,17 +263,17 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
 
     i1 += dimx*dimy;
 //    i2 += dimx*dimy;
-    read = reinterpret_cast<float2*>(in)[i1];
+    read = reinterpret_cast<float2*>(in)[i1/2];
 //    s[0] = in[i1];
 //    s[1] = in[i2];
 
     block.sync();
-    push_regs_3x3(shm[j]+pad+bx, &r[1], tx, ty, bx);
+    push_regs_3x3(shm[j]+pad, &r[1], tx, ty, bx);
     r[4] = warp.shfl_xor(r[4], 16);
     if (tx==0)
-      push_regs_3x3(shm[j]+pad+bx, &r[0], tx-1, ty, bx);
+      push_regs_3x3(shm[j]+pad, &r[0], tx-1, ty, bx);
     if (tx==31)
-      push_regs_3x3(shm[j]+pad+bx, &r[2], tx+1, ty, bx);
+      push_regs_3x3(shm[j]+pad, &r[2], tx+1, ty, bx);
    
     if (warp.thread_rank() < 16)
       read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
@@ -297,12 +297,12 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   }
 
   block.sync();  
-  push_regs_3x3(shm[j]+pad+bx, &r[1], tx, ty, bx);
+  push_regs_3x3(shm[j]+pad, &r[1], tx, ty, bx);
   r[4] = warp.shfl_xor(r[4], 16);
   if (tx==0)
-    push_regs_3x3(shm[j]+pad+bx, &r[0], tx-1, ty, bx);
+    push_regs_3x3(shm[j]+pad, &r[0], tx-1, ty, bx);
   if (tx==31)
-    push_regs_3x3(shm[j]+pad+bx, &r[2], tx+1, ty, bx);
+    push_regs_3x3(shm[j]+pad, &r[2], tx+1, ty, bx);
    
   for (int i = 0; i < 3; i++) {
     r[3*i+0] = warp.shfl_up(r[3*i+1], 1); // fill left halo slice
