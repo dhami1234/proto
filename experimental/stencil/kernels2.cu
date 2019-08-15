@@ -140,14 +140,14 @@ __global__ void stencil27_symm_exp(mfloat *in, mfloat *out, uint dimx, uint dimy
 }
 
 
-__global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, uint dimy, uint dimz, uint kstart, uint kend)
+__global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, uint dimy, uint kstart, uint kend)
 {
   mfloat r[9];
 
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
-  const  int ix = blockIdx.x*blockDim.x + threadIdx.x; // global x index
-  const  int iy = blockIdx.y*blockDim.y + threadIdx.y; // global y index
+  const uint ix = blockIdx.x*blockDim.x + threadIdx.x; // global x index
+  const uint iy = blockIdx.y*blockDim.y + threadIdx.y; // global y index
 
   const uint ti = threadIdx.y*blockDim.x + threadIdx.x; // local 2D index
   const uint pad = 32/sizeof(mfloat);
@@ -161,19 +161,19 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   const uint wye2= (wi+32)/bx; // y-coordinate of 2nd shmem write
 //  const uint txe2= (ti+blockDim.x*blockDim.y)%bx;
 //  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
-  int  ixe= blockIdx.x*blockDim.x + txe - pad; // global x-coordinate of float2 read in unpadded space
-  int  iye= blockIdx.y*blockDim.y + tye - 1; // global y-coordinate of float2 read in unpadded space
+  int  ixe= blockIdx.x*blockDim.x + txe; // global x-coordinate of float2 read in unpadded space
+  int  iye= blockIdx.y*blockDim.y + tye; // global y-coordinate of float2 read in unpadded space
 //  int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
 //  int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
 
   // periodicity
-  if(ixe<0)       ixe  += dimx;
-  if(ixe>dimx-1)  ixe  -= dimx;
+//  if(ixe<0)       ixe  += dimx;
+//  if(ixe>dimx-1)  ixe  -= dimx;
 //  if(ixe2<0)      ixe2 += dimx;
 //  if(ixe2>dimx-1) ixe2 -= dimx;
 
-  if(iye<0)       iye  += dimy;
-  if(iye>dimy-1)  iye  -= dimy;
+//  if(iye<0)       iye  += dimy;
+//  if(iye>dimy-1)  iye  -= dimy;
 //  if(iye2<0)      iye2 += dimy;
 //  if(iye2>dimy-1) iye2 -= dimy;
 
@@ -218,9 +218,9 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   push_regs_3x3(shm[0]+pad, &r[1], tx, ty, bx); // push middle of first slice 
   r[4] = warp.shfl_xor(r[4], 16); // thread gets its correct center value
   if (tx==0)
-      push_regs_3x3(shm[0]+pad, &r[0], tx-1, ty, bx); // push block's left slice
+      push_regs_3x3(shm[0]+pad-1, &r[0], tx, ty, bx); // push block's left slice
   if (tx==31)
-      push_regs_3x3(shm[0]+pad, &r[2], tx+1, ty, bx); // push block's right slice
+      push_regs_3x3(shm[0]+pad+1, &r[2], tx, ty, bx); // push block's right slice
   if (warp.thread_rank() < 16)
     read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
   else
@@ -242,9 +242,9 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   push_regs_3x3(shm[1]+pad, &r[1], tx, ty, bx);
   r[4] = warp.shfl_xor(r[4], 16);
   if (tx==0)
-      push_regs_3x3(shm[1]+pad, &r[0], tx-1, ty, bx);
+      push_regs_3x3(shm[1]+pad-1, &r[0], tx, ty, bx);
   if (tx==31)
-      push_regs_3x3(shm[1]+pad, &r[2], tx+1, ty, bx);
+      push_regs_3x3(shm[1]+pad+1, &r[2], tx, ty, bx);
   if (warp.thread_rank() < 16)
     read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
   else
@@ -271,9 +271,9 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
     push_regs_3x3(shm[j]+pad, &r[1], tx, ty, bx);
     r[4] = warp.shfl_xor(r[4], 16);
     if (tx==0)
-      push_regs_3x3(shm[j]+pad, &r[0], tx-1, ty, bx);
+      push_regs_3x3(shm[j]+pad-1, &r[0], tx, ty, bx);
     if (tx==31)
-      push_regs_3x3(shm[j]+pad, &r[2], tx+1, ty, bx);
+      push_regs_3x3(shm[j]+pad+1, &r[2], tx, ty, bx);
    
     if (warp.thread_rank() < 16)
       read.y = warp.shfl_xor(read.x, 16); // threads now have data 32 bytes apart
@@ -289,7 +289,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
     }
 
     t3 = calc_regs_3x3(r, C1, C2, C3);
-    out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
+    out[bx+pad + ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
     t1 = t2 + calc_regs_3x3(r, C0, C1, C2);
     t2 = t3;
 
@@ -300,9 +300,9 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   push_regs_3x3(shm[j]+pad, &r[1], tx, ty, bx);
   r[4] = warp.shfl_xor(r[4], 16);
   if (tx==0)
-    push_regs_3x3(shm[j]+pad, &r[0], tx-1, ty, bx);
+    push_regs_3x3(shm[j]+pad-1, &r[0], tx, ty, bx);
   if (tx==31)
-    push_regs_3x3(shm[j]+pad, &r[2], tx+1, ty, bx);
+    push_regs_3x3(shm[j]+pad+1, &r[2], tx, ty, bx);
    
   for (int i = 0; i < 3; i++) {
     r[3*i+0] = warp.shfl_up(r[3*i+1], 1); // fill left halo slice
@@ -310,7 +310,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
   }
 
   t3 = calc_regs_3x3(r, C1, C2, C3);
-  out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
+  out[bx+pad + ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
 }
 
 

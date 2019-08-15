@@ -293,6 +293,7 @@ int bigTest(int argc, char*argv[])
 
   mfloat *workspace1, *workspace2;
   int patchSize=nx*ny*nz*sizeof(mfloat);
+  patchSize+=(sizeof(mfloat)*2*nx + 2*(ny+2)*32)*nz;
   cudaMalloc(&workspace1, nbox*patchSize);
   cudaMalloc(&workspace2, nbox*patchSize);
 
@@ -304,17 +305,40 @@ int bigTest(int argc, char*argv[])
 
     //vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox].ptr);
     //vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
-    vec_d_T1[ibox] = workspace1+ibox*nx*ny*nz;
-    vec_d_T2[ibox] = workspace2+ibox*nx*ny*nz;
+    vec_d_T1[ibox] = workspace1+ibox*nz*(ny*nx +2*nx+2*(ny+2)*32/sizeof(mfloat));
+    vec_d_T2[ibox] = workspace2+ibox*nz*(ny*nx +2*nx+2*(ny+2)*32/sizeof(mfloat));
   }
 
   //set memory and allocate host data
   mfloat* h_T1;
   cutilSafeCall(cudaMallocHost(&h_T1, patchSize));
   srand(1);
-  for(long i=0; i<pitch*pitchy*nz; i++) 
-    h_T1[i] = 1.0 - 2.0*(mfloat)(rand()/RAND_MAX);
-  copy_cube_simple(vec_d_T1[0], h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
+  for(int k=0; k<nz; k++)
+      for(int j=0; j<ny; j++)
+          for(int i=0; i<nx; i++) {
+              int index = 2*32/sizeof(mfloat)*(k*(ny+2)+j+1.5) + nx*(k*(ny+2)+j+1) + i;
+              h_T1[index] = 1.0 - 2.0*(mfloat)(rand()/RAND_MAX);
+          }
+  for(int k=0; k<nz; k++) {
+    long offset = k*(nx+2*32/sizeof(mfloat))*(ny+2);
+    memcpy(&h_T1[offset+32/sizeof(mfloat)], &h_T1[offset+ny*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], nx*sizeof(mfloat));
+    memcpy(&h_T1[offset+(ny+1)*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], &h_T1[offset+nx+3*32/sizeof(mfloat)], nx*sizeof(mfloat));
+    for(int j=0; j<ny+2; j++) {
+        memcpy(&h_T1[offset+j*(nx+2*32/sizeof(mfloat))], &h_T1[offset+j*(nx+2*32/sizeof(mfloat))+nx], 32);
+        memcpy(&h_T1[offset+j*(nx+2*32/sizeof(mfloat))+nx+32/sizeof(mfloat)], &h_T1[offset+j*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], 32);
+    }
+  }
+  /*cudaMemcpyAsync(h_T1[32/sizeof(mfloat)], h_T1[ny*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], nx*sizeof(mfloat), cudaMemcpyDeviceToDevice, 0);
+  cudaMemcpyAsync(h_T1[(ny+1)*(nx+2*32/sizeof(mfloat))+32*sizeof(mfloat)], nx+3*32/sizeof(mfloat), nx*sizeof(mfloat), cudaMemcpyDeviceToDevice, 1);
+  cudaMemcpy3DParms parms = {0};
+  parms.extent = make_cudaExtent(32, ny+2, nz);
+  parms.dstPos = make_cudaPos(0, 0, 0);
+  parms.srcPos = make_cudaPos(nx, 0, 0);
+  parms.kind = cudaMemcpyDeviceToDevice;
+  parms.srcPtr = vec_d_T1[0];
+  parms.dstPtr = vec_d_T1[0];
+  cudaPos right = make_cudaPos(nx+32/sizeof(mfloat), 0, 0);*/
+  copy_cube_simple(vec_d_T1[0], h_T1, nx+2*32/sizeof(mfloat), ny+2, nz, cudaMemcpyHostToDevice);
   cudaDeviceSynchronize();
   for(int ibox = 1; ibox < nbox; ibox++)
   {
@@ -338,7 +362,7 @@ int bigTest(int argc, char*argv[])
 
 
     /* copy data to the GPU */
-    copy_cube_simple(d_T1, vec_d_T1[0], pitch, pitchy, nz, cudaMemcpyDeviceToDevice, streams[istream]);
+    copy_cube_simple(d_T1, vec_d_T1[0], nx+2*32/sizeof(mfloat), ny+2, nz, cudaMemcpyDeviceToDevice, streams[istream]);
 
   }
   /* copy stencil to the GPU */
@@ -380,7 +404,7 @@ int bigTest(int argc, char*argv[])
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==2)
           stencil27_symm_exp_prefetch<<<grid, block, 4*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T1, d_T2, nx, ny, nz, kstart, kstop);
+            (d_T1, d_T2, nx+2*32/sizeof(mfloat), ny+2, kstart, kstop);
         else if(routine==3)
           stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
