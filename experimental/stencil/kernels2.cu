@@ -140,7 +140,7 @@ __global__ void stencil27_symm_exp(mfloat *in, mfloat *out, uint dimx, uint dimy
 }
 
 
-__global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, uint dimy, uint kstart, uint kend)
+__global__ void __launch_bounds__(192, 10) stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, uint dimy, uint kstart, uint kend)
 {
   mfloat r[9];
 
@@ -306,7 +306,7 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *in, mfloat *out, uint dimx, 
    
   for (int i = 0; i < 3; i++) {
     r[3*i+0] = warp.shfl_up(r[3*i+1], 1); // fill left halo slice
-    r[3*i+1] = warp.shfl_down(r[3*i+1], 1); // fill right halo slice
+    r[3*i+2] = warp.shfl_down(r[3*i+1], 1); // fill right halo slice
   }
 
   t3 = calc_regs_3x3(r, C1, C2, C3);

@@ -15,13 +15,14 @@
              -nz
              -nstream
              -nbox
-             -iters
+             -niter
              -pitch
              -pitchy
              -routine
 
 
 */
+#include <omp.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -156,21 +157,21 @@ void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind, cudaSt
  using namespace std::chrono;
 
 
-void ctoc(high_resolution_clock::time_point timer, uint iters, float unit_mem, int nrw_center, int nro_halo, int thrdim_x, int thrdim_y, int nx, int ny, int nz)
+void ctoc(high_resolution_clock::time_point timer, uint niter, float unit_mem, int nrw_center, int nro_halo, int thrdim_x, int thrdim_y, int nx, int ny, int nz)
 {  
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   duration<double> time_span = duration_cast<duration<double>>(t2-timer);
-  double fps = ((double)iters) / (time_span.count());
+  double fps = ((double)niter) / (time_span.count());
   double halo_overhead = (double)(2*thrdim_x + 2*(thrdim_y+2)*32/sizeof(mfloat))/(double)(thrdim_x*thrdim_y);
-  double effmembwd = (nrw_center+nro_halo)*unit_mem / (time_span.count()/ (double)iters);
-  double hwmembwd  = (nrw_center+nro_halo+halo_overhead)*unit_mem / (time_span.count()/ (double)iters);
-  double ptsthrough = (double)nx*ny*nz*iters/(double)(time_span.count());
+  double effmembwd = (nrw_center+nro_halo)*unit_mem / (time_span.count()/ (double)niter);
+  double hwmembwd  = (nrw_center+nro_halo+halo_overhead)*unit_mem / (time_span.count()/ (double)niter);
+  double ptsthrough = (double)nx*ny*nz*niter/(double)(time_span.count());
   fprintf(stderr, "(%d, %d, %d): (TX, TY) = (%d, %d), fps %e, time %e, pts/s %e, effmembwd GB/s %3.1e, overhead %3.3e hwmembwd (GB/s) %3.3e)\n", 
 	  nx, ny, nz, thrdim_x, thrdim_y, fps, time_span.count(), ptsthrough, effmembwd/1e9, halo_overhead, hwmembwd/1e9);
 }
 
 
-void compute_difference(void *ptr, mfloat *h_T1, mfloat *h_T2, int nx, int ny, int nz, int pitch, int pitchy, int thrdim_x, int thrdim_y, float iters)
+void compute_difference(void *ptr, mfloat *h_T1, mfloat *h_T2, int nx, int ny, int nz, int pitch, int pitchy, int thrdim_x, int thrdim_y, float niter)
 {
   double temp = 0;
 
@@ -225,17 +226,16 @@ int bigTest(int argc, char*argv[])
 
   using std::vector;
   int device = 0;
-  int nx = 64;
-  int ny = 64;
-  int nz = 64;
-  int iters = 10;
+  int nx = 128;
+  int ny = 128;
+  int nz = 128;
 
   // thrdim_y = 6 makes it so that the number of interior values that a block uses is
   // a multiple of the number of halo values used. See Krotiewski p. 539
   // M * (BX+2 + 2*(BY+2)*8) = BX*BY --> if M = 1 and BX = 32, BY = 6
   int routine = 2, thrdim_x = 32, thrdim_y = 6;
   int nstream = 8;
-  int nbox = 128;
+  int nbox = 64;
   /* -------------------- */
   /* command-line parameters */
   /* -------------------- */
@@ -248,10 +248,13 @@ int bigTest(int argc, char*argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
   GetCmdLineArgumenti(argc, (const char**)argv, "routine", &routine);
   GetCmdLineArgumenti(argc, (const char**)argv, "device", &device);
-  GetCmdLineArgumenti(argc, (const char**)argv, "iters", &iters);
+  int niter = 10*nstream;
+  GetCmdLineArgumenti(argc, (const char**)argv, "niter", &niter);
   void* junk;
   cudaMalloc(&junk, 10); // force a cuda runtime initialization;
   
+  omp_set_dynamic(0);
+  omp_set_num_threads(nstream);
   vector<cudaStream_t> streams(nstream);
   for(int istream = 0; istream < nstream; istream++)
   {
@@ -281,9 +284,7 @@ int bigTest(int argc, char*argv[])
   //gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
 
   //std::cout<< "grid extent depth = " << gridExtent.depth << ", height = "<< gridExtent.height << ", width = " << gridExtent.width << std::endl;
-  printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
-  printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
   //vector<cudaPitchedPtr> vec_p_T1(nbox);
   //vector<cudaPitchedPtr> vec_p_T2(nbox);
   vector<mfloat*> vec_h_T1(nbox);
@@ -294,6 +295,7 @@ int bigTest(int argc, char*argv[])
   mfloat *workspace1, *workspace2;
   int patchSize=nx*ny*nz*sizeof(mfloat);
   patchSize+=(sizeof(mfloat)*2*nx + 2*(ny+2)*32)*nz;
+  int pad = 32/sizeof(mfloat);
   cudaMalloc(&workspace1, nbox*patchSize);
   cudaMalloc(&workspace2, nbox*patchSize);
 
@@ -305,8 +307,8 @@ int bigTest(int argc, char*argv[])
 
     //vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox].ptr);
     //vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
-    vec_d_T1[ibox] = workspace1+ibox*nz*(ny*nx +2*nx+2*(ny+2)*32/sizeof(mfloat));
-    vec_d_T2[ibox] = workspace2+ibox*nz*(ny*nx +2*nx+2*(ny+2)*32/sizeof(mfloat));
+    vec_d_T1[ibox] = workspace1+ibox*nz*(ny*nx +2*nx+2*(ny+2)*pad);
+    vec_d_T2[ibox] = workspace2+ibox*nz*(ny*nx +2*nx+2*(ny+2)*pad);
   }
 
   //set memory and allocate host data
@@ -316,20 +318,20 @@ int bigTest(int argc, char*argv[])
   for(int k=0; k<nz; k++)
       for(int j=0; j<ny; j++)
           for(int i=0; i<nx; i++) {
-              int index = 2*32/sizeof(mfloat)*(k*(ny+2)+j+1.5) + nx*(k*(ny+2)+j+1) + i;
+              int index = 2*pad*(k*(ny+2)+j+1.5) + nx*(k*(ny+2)+j+1) + i;
               h_T1[index] = 1.0 - 2.0*(mfloat)(rand()/RAND_MAX);
           }
   for(int k=0; k<nz; k++) {
-    long offset = k*(nx+2*32/sizeof(mfloat))*(ny+2);
-    memcpy(&h_T1[offset+32/sizeof(mfloat)], &h_T1[offset+ny*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], nx*sizeof(mfloat));
-    memcpy(&h_T1[offset+(ny+1)*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], &h_T1[offset+nx+3*32/sizeof(mfloat)], nx*sizeof(mfloat));
+    long offset = k*(nx+2*pad)*(ny+2);
+    memcpy(&h_T1[offset+pad], &h_T1[offset+ny*(nx+2*pad)+pad], nx*sizeof(mfloat));
+    memcpy(&h_T1[offset+(ny+1)*(nx+2*pad)+pad], &h_T1[offset+nx+3*pad], nx*sizeof(mfloat));
     for(int j=0; j<ny+2; j++) {
-        memcpy(&h_T1[offset+j*(nx+2*32/sizeof(mfloat))], &h_T1[offset+j*(nx+2*32/sizeof(mfloat))+nx], 32);
-        memcpy(&h_T1[offset+j*(nx+2*32/sizeof(mfloat))+nx+32/sizeof(mfloat)], &h_T1[offset+j*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], 32);
+        memcpy(&h_T1[offset+j*(nx+2*pad)], &h_T1[offset+j*(nx+2*pad)+nx], 32);
+        memcpy(&h_T1[offset+j*(nx+2*pad)+nx+pad], &h_T1[offset+j*(nx+2*pad)+pad], 32);
     }
   }
-  /*cudaMemcpyAsync(h_T1[32/sizeof(mfloat)], h_T1[ny*(nx+2*32/sizeof(mfloat))+32/sizeof(mfloat)], nx*sizeof(mfloat), cudaMemcpyDeviceToDevice, 0);
-  cudaMemcpyAsync(h_T1[(ny+1)*(nx+2*32/sizeof(mfloat))+32*sizeof(mfloat)], nx+3*32/sizeof(mfloat), nx*sizeof(mfloat), cudaMemcpyDeviceToDevice, 1);
+  /*cudaMemcpyAsync(h_T1[pad], h_T1[ny*(nx+2*pad)+pad], nx*sizeof(mfloat), cudaMemcpyDeviceToDevice, 0);
+  cudaMemcpyAsync(h_T1[(ny+1)*(nx+2*pad)+32*sizeof(mfloat)], nx+3*pad, nx*sizeof(mfloat), cudaMemcpyDeviceToDevice, 1);
   cudaMemcpy3DParms parms = {0};
   parms.extent = make_cudaExtent(32, ny+2, nz);
   parms.dstPos = make_cudaPos(0, 0, 0);
@@ -337,8 +339,8 @@ int bigTest(int argc, char*argv[])
   parms.kind = cudaMemcpyDeviceToDevice;
   parms.srcPtr = vec_d_T1[0];
   parms.dstPtr = vec_d_T1[0];
-  cudaPos right = make_cudaPos(nx+32/sizeof(mfloat), 0, 0);*/
-  copy_cube_simple(vec_d_T1[0], h_T1, nx+2*32/sizeof(mfloat), ny+2, nz, cudaMemcpyHostToDevice);
+  cudaPos right = make_cudaPos(nx+pad, 0, 0);*/
+  copy_cube_simple(vec_d_T1[0], h_T1, nx+2*pad, ny+2, nz, cudaMemcpyHostToDevice);
   cudaDeviceSynchronize();
   for(int ibox = 1; ibox < nbox; ibox++)
   {
@@ -362,7 +364,7 @@ int bigTest(int argc, char*argv[])
 
 
     /* copy data to the GPU */
-    copy_cube_simple(d_T1, vec_d_T1[0], nx+2*32/sizeof(mfloat), ny+2, nz, cudaMemcpyDeviceToDevice, streams[istream]);
+    copy_cube_simple(d_T1, vec_d_T1[0], nx+2*pad, ny+2, nz, cudaMemcpyDeviceToDevice, streams[istream]);
 
   }
   /* copy stencil to the GPU */
@@ -376,14 +378,20 @@ int bigTest(int argc, char*argv[])
   
   dim3 block(thrdim_x, thrdim_y, 1);
   dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
-    
+  int shmem = 2*block.x*block.y*sizeof(mfloat);    
 
   int kstart = 1;
   int kstop = nz-1;
  
   cudaError_t sync, async;
 
-  high_resolution_clock::time_point time_start = high_resolution_clock::now(); 
+  high_resolution_clock::time_point time_start, time_end;
+  cudaProfilerStart();
+#pragma omp parallel
+{
+  int tid = omp_get_thread_num();
+  if (tid == 0)
+    time_start = high_resolution_clock::now(); 
 
   for(int ibox = 0; ibox < nbox; ibox++)
   {
@@ -395,43 +403,48 @@ int bigTest(int argc, char*argv[])
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
 
-    for(int it=0; it<iters; it++)
+    for(int it=tid; it<niter; it+=nstream)
     {
 
-    int istream = (ibox*iters + it) % nstream; 
-        if(routine==1)
+  //  int istream = (ibox*niter + it) % nstream; 
+  /*      if(routine==1)
           stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_prefetch<<<grid, block, 4*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T1, d_T2, nx+2*32/sizeof(mfloat), ny+2, kstart, kstop);
-        else if(routine==3)
+    */      stencil27_symm_exp_prefetch<<<grid, block, 2*shmem, streams[tid]>>>
+            (d_T1, d_T2, nx+2*pad, ny+2, kstart, kstop);
+  /*      else if(routine==3)
           stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else
           stencil27_symm_exp_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T1, d_T2, nx, ny, nz, kstart, kstop);
-      
+    */  
     }
     /* finalize */
-    //unsigned long long int numflops = 2*iters*27*nx*ny*nz;
- 
-  }
-  sync = cudaGetLastError();  
-  if (sync != cudaSuccess)
+    //unsigned long long int numflops = 2*niter*27*nx*ny*nz;
+ }
+  if (tid == 0) {
+    sync = cudaGetLastError();  
+    if (sync != cudaSuccess)
       std::cout << "SYNCHRONOUS ERROR: " << cudaGetErrorString(sync) << std::endl;
-  async = cudaDeviceSynchronize();
-  if (async != cudaSuccess)
+    async = cudaDeviceSynchronize();
+    if (async != cudaSuccess)
       std::cout << "ASYNCHRONOUS ERROR: " << cudaGetErrorString(async) << std::endl;
-  high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
+    time_end = high_resolution_clock::now(); 
+  }
+}
+  cudaProfilerStop();
   duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
   double microseconds = 1.0e6*(time_span.count());
   long long nptsperbox = nx*ny*nz;
-  long long flops =  2*iters*27*(nptsperbox)*nbox;
+  long long flops =  2*niter*27*(nptsperbox)*nbox;
   double tera_flop_rate = flops/microseconds/1.0e6;
-  std::cout << "nx = " << nx << ",ny= " << ny << ",nz= " << nz << ",nbox=" << nbox << ",iters = " << iters << std::endl;
-  std::cout << "time = " << microseconds << "mu s, num ops= " << flops << ", flop rate = " << std::fixed << tera_flop_rate << "TFlops"  << std::endl;
-//  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
+  std::cout << "nx = " << nx << ", ny = " << ny << ", nz = " << nz << ", nbox = " 
+            << nbox << ", nstream = " << nstream << ", niter = " << niter << std::endl;
+  std::cout << "time = " << microseconds << "mu s, num ops = " << flops 
+            << ", flop rate = " << std::fixed << tera_flop_rate << "TFlops"  << std::endl;
+//  ctoc(timer, niter, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */
 //
@@ -439,7 +452,7 @@ int bigTest(int argc, char*argv[])
 //  host_convolution(h_T2, h_T1, nx, ny, nz, pitch, pitchy, h_kernel_3c_all);
 //
 //  /* compute difference in the results */
-//  compute_difference(d_T2, h_T1, h_T2, nx, ny, nz, pitch, pitchy, thrdim_x, thrdim_y, iters);
+//  compute_difference(d_T2, h_T1, h_T2, nx, ny, nz, pitch, pitchy, thrdim_x, thrdim_y, niter);
 
 
   for(int istream = 0; istream < nstream; istream++)
@@ -452,11 +465,9 @@ int bigTest(int argc, char*argv[])
 
 int main(int argc, char*argv[])
 {
-cudaProfilerStart();
   
   int retval = bigTest(argc, argv);
 
-cudaProfilerStop();
 cudaDeviceReset();
   return retval;
 }
