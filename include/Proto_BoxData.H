@@ -398,6 +398,11 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */  
     void define(const Box& a_box, bool a_stackAllocation=false);
 
+    BoxData(const Box& a_box, int ncomp)
+    {
+      PR_assert(ncomp == C);
+      define(a_box);
+    }
 
     ///define using malloc instead of stack allocation
     void defineMalloc(const Box& a_box);
