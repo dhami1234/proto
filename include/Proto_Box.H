@@ -485,7 +485,7 @@ namespace Proto
     
     /// Extrude (Int Version)
     /**
-       AKA single sided grow. Returns a new Box with the <code> a_dir </code> direction extruded a distance <code> a_dist </code).
+       A single sided grow. Returns a new Box with the <code> a_dir </code> direction extruded a distance <code> a_dist </code).
        By default, the extrusion is upwards. If <code>a_upper</code> is false, extrudes downwards.
         
        \param a_dir    Axis to extrude along
@@ -494,7 +494,7 @@ namespace Proto
 
        Example:
        @code
-       //DIM=2
+       //DIM=3
        using namespace Proto;
        Box B0 = Box::Cube(4).shift(Point::Ones());
        Box B1 = B0.extrude(2,3,false);
