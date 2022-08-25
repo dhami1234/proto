@@ -574,8 +574,52 @@ namespace MHDOp {
 	}
 	PROTO_KERNEL_END(Scale_Ff_calc2F, Scale_Ff_calc2)
 
+	PROTO_KERNEL_START
+	void PowellF(State&         a_P,
+	             const State&   a_W)
+	             //const Var<double,1>&  dot_pro_sum3)
+	{
+
+#if DIM==2
+		a_P(0) = 0.;
+		a_P(1) = a_W(4)/4.0/PI;
+		a_P(2) = a_W(5)/4.0/PI;
+		a_P(3) = a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI;
+		//a_P(3) = a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI + dot_pro_sum3(0)/4.0/PI;
+		a_P(4) = a_W(1);
+		a_P(5) = a_W(2);
+#endif
+
+#if DIM==3
+		a_P(0) = 0.;
+		a_P(1) = a_W(5)/4.0/PI;
+		a_P(2) = a_W(6)/4.0/PI;
+		a_P(3) = a_W(7)/4.0/PI;
+		a_P(4) = a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI;
+		//a_P(4) = a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI + dot_pro_sum3(0)/4.0/PI;
+		a_P(5) = a_W(1);
+		a_P(6) = a_W(2);
+		a_P(7) = a_W(3);
+
+#endif
+	}
+	PROTO_KERNEL_END(PowellF, Powell)
+
+	PROTO_KERNEL_START
+	void B_face_calcF(const Point& a_pt,
+                    State& a_B_face,
+	               const State& a_W_sph1,
+	               const State& a_W_sph2,
+	               int a_d)
+	{
+		for (int i=0; i< NUMCOMPS; i++) {
+			a_B_face(i) = 0.5*(a_W_sph1(2+DIM+a_d)+a_W_sph1(2+DIM+a_d));
+		}
+	}
+	PROTO_KERNEL_END(B_face_calcF, B_face_calc)
 
 	void step_spherical_2O(BoxData<double,NUMCOMPS>& a_Rhs,
+			               BoxData<double,NUMCOMPS>& a_Rhs_divB,	
 	          const BoxData<double,NUMCOMPS>& a_U,
 	          const Box& a_rangeBox,
 	          const double a_dx,
@@ -603,16 +647,17 @@ namespace MHDOp {
 
 		using namespace std;
 		a_Rhs.setVal(0.0);
-		
+		a_Rhs_divB.setVal(0.0);
+
 		double gamma = a_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz};
-		
-		
-
 		BoxData<double,DIM> x_sph_cc(dbx0), x_sph_fc(dbx0), dx_sph(dbx0), face_area(dbx0);
 		BoxData<double,1> cell_volume(dbx0);
 		Vector F_f_sph(dbx0), F_f(dbx0), F_f_scaled(dbx0), Rhs_d(dbx0), RhsV(dbx0);
+		Vector B_f_sph(dbx0), B_f(dbx0), B_f_scaled(dbx0), Rhs_d_divB(dbx0), RhsV_divB(dbx0);
 		RhsV.setVal(0.0);
+		RhsV_divB.setVal(0.0);
+		
 
 		MHD_Mapping::get_cell_volume(cell_volume,dbx0,a_dx,a_dy,a_dz);
 		MHD_Mapping::get_face_area(face_area,dbx0,a_dx,a_dy,a_dz);
@@ -636,7 +681,18 @@ namespace MHDOp {
 			forallInPlace_p(Scale_with_A_Ff_calc, F_f_scaled, F_f, face_area, d);
 			Rhs_d = m_divergence[d](F_f_scaled);
 			RhsV += Rhs_d;
+
+
+			forallInPlace_p(B_face_calc, B_f_sph, W_low,W_high, d);
+			forallInPlace_p(Scale_with_A_Ff_calc, B_f_scaled, B_f_sph, face_area, d);
+			Rhs_d_divB = m_divergence[d](B_f_scaled);
+			RhsV_divB += Rhs_d_divB;
+
 		}
 		forallInPlace_p(Scale_with_V_calc, a_Rhs, RhsV, cell_volume);
+
+		forallInPlace_p(Scale_with_V_calc, a_Rhs_divB, RhsV_divB, cell_volume);
+		Vector Powell_term = forall<double,NUMCOMPS>(Powell,W_cart);
+		a_Rhs_divB *= Powell_term;
 	}
 }

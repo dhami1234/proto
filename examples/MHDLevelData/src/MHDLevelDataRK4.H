@@ -31,6 +31,7 @@ public:
 //TODO: Put in MEMTYPE so we can run on the GPU?
 	LevelBoxData<double,NUMCOMPS> m_U;
 	LevelBoxData<double,NUMCOMPS> m_U_old;
+	LevelBoxData<double,NUMCOMPS> m_divB;
 	LevelBoxData<double,NUMCOMPS> m_BC;
 	LevelBoxData<double,1> m_Jacobian_ave;
 	LevelBoxData<double,DIM*DIM> m_N_ave_f;

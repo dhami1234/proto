@@ -21,6 +21,7 @@ namespace MHDOp
 	// by the RK4 implementation.
 
 	void step_spherical_2O(BoxData<double,NUMCOMPS>& a_Rhs,
+			               BoxData<double,NUMCOMPS>& a_Rhs_divB,	
 	          const BoxData<double,NUMCOMPS>& a_U,
 	          const Box& a_rangeBox,
 	          const double a_dx,
