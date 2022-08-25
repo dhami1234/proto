@@ -28,6 +28,7 @@ public:
 	double m_dy;
 	double m_dz;
 	double m_gamma;
+	bool m_divB_calculated;
 //TODO: Put in MEMTYPE so we can run on the GPU?
 	LevelBoxData<double,NUMCOMPS> m_U;
 	LevelBoxData<double,NUMCOMPS> m_U_old;

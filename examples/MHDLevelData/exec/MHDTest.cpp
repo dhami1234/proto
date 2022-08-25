@@ -108,9 +108,6 @@ int main(int argc, char* argv[])
 		} else {
 			MHD_Mapping::Regular_map_filling_func(state);
 		}
-
-		// state.m_U.defineExchange<PolarExchangeCopier>(0,1,0);
-		// state.m_U.defineExchange<PolarExchangeCopier>(1,0);
 		
 		double time = 0.;
 		double dt_new = 0.;
@@ -182,8 +179,7 @@ int main(int argc, char* argv[])
 		double probe_cadence = 0;
 		for (int k = start_iter; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{	
-
-			
+			state.m_divB_calculated = false;
 			for (auto dit : state.m_U){	
 				MHDOp::Fix_negative_P(state.m_U[ dit],inputs.gamma);	
 			}	

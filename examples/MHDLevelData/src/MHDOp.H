@@ -29,7 +29,8 @@ namespace MHDOp
 	          const double a_dz,
 	          const double a_gamma,
 	          bool a_computeMaxWaveSpeed,
-	          bool a_callBCs);
+	          bool a_callBCs,
+	          bool a_divB_calculated);
 
 	void step(BoxData<double,NUMCOMPS>& a_Rhs,
 	          const BoxData<double,NUMCOMPS>& a_U,

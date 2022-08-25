@@ -129,11 +129,8 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
         new_state[ dit]+=idOp((a_DX.m_DU)[ dit]);  //Phil found doing this improves performance
 	}
 	HDF5Handler h5;
-	// h5.writeLevel(1, new_state, "DATA_0");
 	new_state.defineExchange<PolarExchangeCopier>(2,1);
 	new_state.exchange(); 
-	// h5.writeLevel(1, new_state, "DATA_1");
-
 
 	for (auto dit : new_state){	
         if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
@@ -155,12 +152,13 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 				MHDOp::step_spherical(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit],(a_State.m_A_1_avg)[ dit],(a_State.m_A_2_avg)[ dit],(a_State.m_A_3_avg)[ dit],(a_State.m_A_inv_1_avg)[ dit],(a_State.m_A_inv_2_avg)[ dit],(a_State.m_A_inv_3_avg)[ dit],(a_State.m_detAA_avg)[ dit],(a_State.m_detAA_inv_avg)[ dit],(a_State.m_r2rdot_avg)[ dit],(a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit],(a_State.m_r2detA_1_avg)[ dit],(a_State.m_r2detAA_1_avg)[ dit], (a_State.m_r2detAn_1_avg)[ dit],(a_State.m_A_row_mag_1_avg)[ dit], (a_State.m_rrdotdetA_2_avg)[ dit],(a_State.m_rrdotdetAA_2_avg)[ dit],(a_State.m_rrdotd3ncn_2_avg)[ dit],(a_State.m_A_row_mag_2_avg)[ dit],(a_State.m_rrdotdetA_3_avg)[ dit],(a_State.m_rrdotdetAA_3_avg)[ dit],(a_State.m_rrdotncd2n_3_avg)[ dit],(a_State.m_A_row_mag_3_avg)[ dit], false, false);
 			}
 			if (inputs.Spherical_2nd_order == 1){
-				MHDOp::step_spherical_2O(a_DX.m_DU[ dit], a_State.m_divB[dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, false, false);
+				MHDOp::step_spherical_2O(a_DX.m_DU[ dit], a_State.m_divB[dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, false, false, a_State.m_divB_calculated);
 			}
 		} else {
 		    MHDOp::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);
         }
 	}
+	a_State.m_divB_calculated = true; // This makes sure that divB is calculated only once in RK4
 	a_DX*=a_dt;
 }
 
@@ -179,44 +177,7 @@ void MHDLevelDatadivBOp::operator()(MHDLevelDataDX& a_DX,
                                     double a_dt,
                                     MHDLevelDataState& a_State)
 {
-	// LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
-	// auto idOp = (1.0)*Shift(Point::Zeros());
-	// // (a_State.m_U).copyTo(new_state); // LevelBoxData copyTo doesn't copy ghost cells. Needs exchange if this is used
-	// for (auto dit : new_state){	
-	// 	(a_State.m_U[ dit]).copyTo(new_state[ dit]);
-	// 	// new_state[ dit]+=(a_DX.m_DU)[ dit];
-    //     new_state[ dit]+=idOp((a_DX.m_DU)[ dit]);  //Phil found doing this improves performance
-	// }
-	// new_state.defineExchange<PolarExchangeCopier>(2,1);
-	// new_state.exchange(); 
-
-	// for (auto dit : new_state){	
-    //     if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
-	// 		if (inputs.Spherical_2nd_order == 0){
-	// 			MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[ dit],a_State.m_U[ dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
-	// 			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[ dit],a_State.m_U[ dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit], (a_State.m_detAA_avg)[ dit], (a_State.m_detAA_inv_avg)[ dit], (a_State.m_r2rdot_avg)[ dit], (a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit], inputs.LowBoundType,inputs.HighBoundType);
-	// 		}
-	// 		if (inputs.Spherical_2nd_order == 1){
-	// 			MHD_Set_Boundary_Values::Set_Boundary_Values_Spherical_2O(new_state[ dit],a_State.m_U[ dit].box(), a_State.m_BC[ dit],a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
-	// 		}
-	// 	} 
-	// }
-
-
-	for (auto dit : a_State.m_U){	
-		//Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        if (inputs.grid_type_global == 2){
-			if (inputs.Spherical_2nd_order == 0){
-				// MHD_divB_Cleaning::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);
-			}
-			if (inputs.Spherical_2nd_order == 1){
-				// MHD_divB_Cleaning::step_spherical_2O(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, false, false);
-				a_State.m_divB[dit].copyTo(a_DX.m_DU[dit]);
-			}
-		} else {
-		    // MHD_divB_Cleaning::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);
-        }
-	}
+	a_State.m_divB.copyTo(a_DX.m_DU);
 	a_DX*=a_dt;
 }
 

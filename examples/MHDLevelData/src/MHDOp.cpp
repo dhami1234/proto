@@ -627,7 +627,8 @@ namespace MHDOp {
 	          const double a_dz,
 	          const double a_gamma,
 	          bool a_computeMaxWaveSpeed,
-	          bool a_callBCs)
+	          bool a_callBCs,
+	          bool a_divB_calculated)
 	{
 
 		Box dbx0 = a_U.box();
@@ -647,7 +648,7 @@ namespace MHDOp {
 
 		using namespace std;
 		a_Rhs.setVal(0.0);
-		a_Rhs_divB.setVal(0.0);
+		if (!a_divB_calculated) a_Rhs_divB.setVal(0.0);
 
 		double gamma = a_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz};
@@ -682,17 +683,19 @@ namespace MHDOp {
 			Rhs_d = m_divergence[d](F_f_scaled);
 			RhsV += Rhs_d;
 
-
-			forallInPlace_p(B_face_calc, B_f_sph, W_low,W_high, d);
-			forallInPlace_p(Scale_with_A_Ff_calc, B_f_scaled, B_f_sph, face_area, d);
-			Rhs_d_divB = m_divergence[d](B_f_scaled);
-			RhsV_divB += Rhs_d_divB;
-
+			if (!a_divB_calculated){
+				forallInPlace_p(B_face_calc, B_f_sph, W_low,W_high, d);
+				forallInPlace_p(Scale_with_A_Ff_calc, B_f_scaled, B_f_sph, face_area, d);
+				Rhs_d_divB = m_divergence[d](B_f_scaled);
+				RhsV_divB += Rhs_d_divB;
+			}
 		}
 		forallInPlace_p(Scale_with_V_calc, a_Rhs, RhsV, cell_volume);
 
-		forallInPlace_p(Scale_with_V_calc, a_Rhs_divB, RhsV_divB, cell_volume);
-		Vector Powell_term = forall<double,NUMCOMPS>(Powell,W_cart);
-		a_Rhs_divB *= Powell_term;
+		if (!a_divB_calculated){
+			forallInPlace_p(Scale_with_V_calc, a_Rhs_divB, RhsV_divB, cell_volume);
+			Vector Powell_term = forall<double,NUMCOMPS>(Powell,W_cart);
+			a_Rhs_divB *= Powell_term;
+		}
 	}
 }
