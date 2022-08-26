@@ -513,7 +513,7 @@ namespace MHD_Set_Boundary_Values {
 				a_U_exterp = m_exterp_f_2nd(a_U);
 				a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
 			}
-
+			MHDOp::Fix_negative_P(a_U_ghost,a_gamma); // Extrapolation can make -ve P in ghost cells.
 			a_U_ghost.copyTo(a_U,BoundBox);
 		}
 

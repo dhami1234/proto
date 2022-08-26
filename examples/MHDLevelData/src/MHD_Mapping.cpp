@@ -708,7 +708,7 @@ namespace MHD_Mapping {
 	                    const Var<double,NUMCOMPS>& a_W)
 	{
 		for (int i=0; i< DIM; i++) {
-			a_out_data(i) = a_phys_coords(i);///14957550000000; // AU
+			a_out_data(i) = a_phys_coords(i)/AU; // AU
 		}
 		
 		a_out_data(DIM+0) = a_W(0)/mp; // /cm^3

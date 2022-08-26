@@ -179,6 +179,7 @@ int main(int argc, char* argv[])
 		double probe_cadence = 0;
 		for (int k = start_iter; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{	
+			auto start = chrono::steady_clock::now();
 			state.m_divB_calculated = false;
 			for (auto dit : state.m_U){	
 				MHDOp::Fix_negative_P(state.m_U[ dit],inputs.gamma);	
@@ -200,8 +201,6 @@ int main(int argc, char* argv[])
 						} else {
 							MHD_Mapping::JU_to_W_bar_calc(new_state2[ dit],state.m_U[ dit],(state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit],dx,dy,dz,inputs.gamma);
 						}
-						
-						
 						MHD_CFL::Min_dt_calc_func(dt_new, new_state2[ dit], dx, dy, dz, inputs.gamma);
 						if (dt_new < dt_temp) dt_temp = dt_new;
 					}
@@ -238,7 +237,7 @@ int main(int argc, char* argv[])
 				{
 					BC_data_rotated.copyTo(state.m_BC[ dit]);
 				}
-				auto start = chrono::steady_clock::now();
+				
 				if (inputs.convTestType == 1 || inputs.timeIntegratorType == 1) {
 					eulerstep.advance(time,dt,state);
 				} else {
@@ -254,9 +253,7 @@ int main(int argc, char* argv[])
 					// Take step for divB term
 					divBstep.advance(time,dt,state);
 				}
-				auto end = chrono::steady_clock::now();
 				time += dt;
-				if(pid==0) cout <<"nstep = " << k << " time = " << time << " time step = " << dt << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms"  << endl;
 			}
 			
 			if (inputs.convTestType == 0)
@@ -296,20 +293,24 @@ int main(int argc, char* argv[])
 						// MHD_Mapping::out_data_calc(out_data[ dit],phys_coords[ dit],state.m_U[ dit]);
 					}
 					//Solution on a single patch, No need when using hdf5. Needed for convergence tests.
-					(out_data).copyTo(OUT[lev]);
+					if (inputs.convTestType != 0) (out_data).copyTo(OUT[lev]);
 					// (state.m_U).copyTo(OUT[lev]);
-					OUT[lev].exchange();
+					if (inputs.convTestType != 0) OUT[lev].exchange();
+
 					// std::string filename_Data="Data_"+std::to_string(k);
 					std::string filename_Data=inputs.Data_file_Prefix+std::to_string(k);
-					MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz,k,time,filename_Data);
-					// h5.setTime(time);
-					// h5.setTimestep(dt);
-					// #if DIM == 2
-					// h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_Data);
-					// #endif
-					// #if DIM == 3
-					// h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data, filename_Data);
-					// #endif
+					// MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz,k,time,filename_Data);
+					
+					h5.setTime(time);
+					h5.setTimestep(dt);
+					out_data.defineExchange<PolarExchangeCopier>(2,1);
+					out_data.exchange(); 
+					#if DIM == 2
+					h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_Data);
+					#endif
+					#if DIM == 3
+					h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data, filename_Data);
+					#endif
 					if(pid==0) cout << "Written data file after step "<< k << endl;		
 				}
 				if((((inputs.CheckpointInterval > 0) && ((k)%inputs.CheckpointInterval == 0)) || time == inputs.tstop || ((inputs.CheckpointInterval > 0) && (k == 0))) && (k!=start_iter || k==0))
@@ -328,6 +329,9 @@ int main(int argc, char* argv[])
 					if(pid==0) cout << "Written checkpoint file after step "<< k << endl;	
 				}
 			}
+			auto end = chrono::steady_clock::now();
+			if(pid==0) cout <<"nstep = " << k << " time = " << time << " time step = " << dt << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms"  << endl;
+
 		}	
 		outputFile.close();
 
