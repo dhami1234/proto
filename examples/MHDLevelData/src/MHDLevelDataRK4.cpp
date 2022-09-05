@@ -26,7 +26,8 @@ MHDLevelDataState::MHDLevelDataState(const ProblemDomain& a_probDom,
     m_dz(a_dz),
 	m_gamma(a_gamma),
 	m_dbl(a_probDom, a_boxSize),
-	m_probDom(a_probDom)
+	m_probDom(a_probDom),
+	m_min_dt(0.0)
 {
 	m_U.define(m_dbl,Point::Zero());
 	m_U_old.define(m_dbl,Point::Zero());
@@ -144,7 +145,8 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 		} 
 	}
 
-
+	double dt_temp = 1.0e10;
+	double dt_new;
 	for (auto dit : a_State.m_U){	
 		//Set the last two arguments to false so as not to call routines that would don't work in parallel yet
         if (inputs.grid_type_global == 2){
@@ -152,13 +154,21 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 				MHDOp::step_spherical(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit],(a_State.m_A_1_avg)[ dit],(a_State.m_A_2_avg)[ dit],(a_State.m_A_3_avg)[ dit],(a_State.m_A_inv_1_avg)[ dit],(a_State.m_A_inv_2_avg)[ dit],(a_State.m_A_inv_3_avg)[ dit],(a_State.m_detAA_avg)[ dit],(a_State.m_detAA_inv_avg)[ dit],(a_State.m_r2rdot_avg)[ dit],(a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit],(a_State.m_r2detA_1_avg)[ dit],(a_State.m_r2detAA_1_avg)[ dit], (a_State.m_r2detAn_1_avg)[ dit],(a_State.m_A_row_mag_1_avg)[ dit], (a_State.m_rrdotdetA_2_avg)[ dit],(a_State.m_rrdotdetAA_2_avg)[ dit],(a_State.m_rrdotd3ncn_2_avg)[ dit],(a_State.m_A_row_mag_2_avg)[ dit],(a_State.m_rrdotdetA_3_avg)[ dit],(a_State.m_rrdotdetAA_3_avg)[ dit],(a_State.m_rrdotncd2n_3_avg)[ dit],(a_State.m_A_row_mag_3_avg)[ dit], false, false);
 			}
 			if (inputs.Spherical_2nd_order == 1){
-				MHDOp::step_spherical_2O(a_DX.m_DU[ dit], a_State.m_divB[dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, false, false, a_State.m_divB_calculated);
+				MHDOp::step_spherical_2O(a_DX.m_DU[ dit], a_State.m_divB[dit], dt_new, new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, false, false, a_State.m_divB_calculated, a_State.m_min_dt_calculated);
 			}
 		} else {
 		    MHDOp::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);
         }
+		if (dt_new < dt_temp) dt_temp = dt_new;
 	}
+	double mintime;
+	#ifdef PR_MPI
+		MPI_Reduce(&dt_temp, &mintime, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
+		MPI_Bcast(&mintime, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	#endif
+	a_State.m_min_dt = mintime;
 	a_State.m_divB_calculated = true; // This makes sure that divB is calculated only once in RK4
+	a_State.m_min_dt_calculated = true; // This makes sure that min_dt is calculated only once in RK4
 	a_DX*=a_dt;
 }
 

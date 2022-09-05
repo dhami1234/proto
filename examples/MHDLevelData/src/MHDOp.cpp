@@ -15,6 +15,7 @@
 #include "MHD_Output_Writer.H"
 #include "MHD_Input_Parsing.H"
 #include "MHD_Constants.H"
+#include "MHD_CFL.H"
 
 extern Parsefrominputs inputs;
 
@@ -619,7 +620,8 @@ namespace MHDOp {
 	PROTO_KERNEL_END(B_face_calcF, B_face_calc)
 
 	void step_spherical_2O(BoxData<double,NUMCOMPS>& a_Rhs,
-			               BoxData<double,NUMCOMPS>& a_Rhs_divB,	
+			               BoxData<double,NUMCOMPS>& a_Rhs_divB,
+						   double& a_min_dt,	
 	          const BoxData<double,NUMCOMPS>& a_U,
 	          const Box& a_rangeBox,
 	          const double a_dx,
@@ -628,7 +630,8 @@ namespace MHDOp {
 	          const double a_gamma,
 	          bool a_computeMaxWaveSpeed,
 	          bool a_callBCs,
-	          bool a_divB_calculated)
+	          bool a_divB_calculated,
+	          bool a_min_dt_calculated)
 	{
 
 		Box dbx0 = a_U.box();
@@ -669,8 +672,16 @@ namespace MHDOp {
 		Vector W_cart  = forall<double,NUMCOMPS>(consToPrim, a_U, gamma);
 		MHD_Mapping::Cartesian_to_Spherical(W_sph, W_cart, x_sph_cc);
 
-		MHD_Mapping::Correct_V_theta_phi_at_poles(W_sph, a_dx, a_dy, a_dz);
+		if (!a_min_dt_calculated){
+			// double min_dt;
+			MHD_CFL::Min_dt_calc_func(a_min_dt, W_sph, a_dx, a_dy, a_dz, gamma);
+			// a_min_dt = min_dt; 
+		} 
 
+		MHD_Mapping::Correct_V_theta_phi_at_poles(W_sph, a_dx, a_dy, a_dz);
+		
+		
+		
 		for (int d = 0; d < DIM; d++)
 		{
 			Vector W_low_temp(dbx0), W_high_temp(dbx0);

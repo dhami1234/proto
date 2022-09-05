@@ -29,6 +29,8 @@ public:
 	double m_dz;
 	double m_gamma;
 	bool m_divB_calculated;
+	bool m_min_dt_calculated;
+	double m_min_dt;
 //TODO: Put in MEMTYPE so we can run on the GPU?
 	LevelBoxData<double,NUMCOMPS> m_U;
 	LevelBoxData<double,NUMCOMPS> m_U_old;

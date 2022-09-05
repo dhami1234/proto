@@ -90,6 +90,7 @@ int main(int argc, char* argv[])
 			dt = inputs.CFL*std::min({dx,dy,dz});
 			#endif
 		}
+		if (inputs.convTestType == 0) dt = 0.;
 		// Create an object state. state.m_U has all the consereved variables (multiplied by Jacobian for mapped grids)
 		// All the mapping variables, which are functions of mapping geometry are also included in this class object.
 		MHDLevelDataState state(pd,inputs.BoxSize*Point::Ones(),dx, dy, dz, inputs.gamma);
@@ -177,41 +178,31 @@ int main(int argc, char* argv[])
     	outputFile.open(inputs.Probe_data_file,std::ios::app);
 		if(pid==0) outputFile << "---------------------" << endl;
 		double probe_cadence = 0;
+		// auto t1, t2;
+		auto t1 = chrono::steady_clock::now();
+		auto t2 = chrono::steady_clock::now();
+		double p_fix_time = 0, dt_time = 0, BC_time = 0, euler_rk4_time = 0, divB_time = 0;
 		for (int k = start_iter; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{	
 			auto start = chrono::steady_clock::now();
 			state.m_divB_calculated = false;
+			state.m_min_dt_calculated = false;
+			t1 = chrono::steady_clock::now();
 			for (auto dit : state.m_U){	
 				MHDOp::Fix_negative_P(state.m_U[ dit],inputs.gamma);	
-			}	
+			}
+			t2 = chrono::steady_clock::now();	
+			p_fix_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 			if (k!=start_iter){
-				if (inputs.convTestType == 0){
-					double dt_temp = 1.0e10;
-					for (auto dit : state.m_U){		
-						if (inputs.grid_type_global == 2){
-							if (inputs.Spherical_2nd_order == 0){
-							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state2[ dit], state.m_U[ dit], (state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit], (state.m_A_row_mag_avg)[ dit], inputs.gamma, true);
-							// MHD_Mapping::JU_to_W_bar_calc(new_state2[ dit],state.m_U[ dit],(state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit],dx,dy,dz,inputs.gamma);
-							}
-							if (inputs.Spherical_2nd_order == 1 ){
-								MHDOp::consToPrimcalc(new_state3[ dit],state.m_U[ dit],inputs.gamma);
-								MHD_Mapping::get_sph_coords_cc(x_sph[ dit],x_sph[ dit].box(),dx, dy, dz);
-								MHD_Mapping::Cartesian_to_Spherical(new_state2[ dit],new_state3[ dit],x_sph[ dit]);
-							}
-						} else {
-							MHD_Mapping::JU_to_W_bar_calc(new_state2[ dit],state.m_U[ dit],(state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit],dx,dy,dz,inputs.gamma);
-						}
-						MHD_CFL::Min_dt_calc_func(dt_new, new_state2[ dit], dx, dy, dz, inputs.gamma);
-						if (dt_new < dt_temp) dt_temp = dt_new;
+				t1 = chrono::steady_clock::now();
+				if (k!=start_iter+1){
+					if (inputs.convTestType == 0){
+						dt = inputs.CFL*state.m_min_dt;
+						if ((inputs.tstop - time) < dt) dt = inputs.tstop - time;
 					}
-					double mintime;
-					#ifdef PR_MPI
-						MPI_Reduce(&dt_temp, &mintime, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
-						MPI_Bcast(&mintime, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-					#endif
-					dt = inputs.CFL*mintime;
-					if ((inputs.tstop - time) < dt) dt = inputs.tstop - time;
 				}
+				t2 = chrono::steady_clock::now();	
+				dt_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 				// Below objects need to be created inside the time loop. Otherwise the init in dx keeps on eating memory
 				// This is used to take rk4 step
 				RK4<MHDLevelDataState,MHDLevelDataRK4Op,MHDLevelDataDX> rk4;
@@ -220,7 +211,7 @@ int main(int argc, char* argv[])
 				// Both Powell divergence cleaning and viscosity implementation need Euler steps at each state update
 				EulerStep<MHDLevelDataState, MHDLevelDatadivBOp, MHDLevelDataDX> divBstep;
 				EulerStep<MHDLevelDataState, MHDLevelDataViscosityOp, MHDLevelDataDX> viscositystep;
-				
+
 				double carr_rot_time = 25.38*24*60*60; // Seconds
 				// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
 				// Carrington rotation time (27.2753 days) is from Earth's prespective.
@@ -232,12 +223,17 @@ int main(int argc, char* argv[])
 				static Stencil<double> m_right_shift;
         		m_right_shift = (1.0-needed_fraction)*Shift(Point::Basis(2)*(cells_to_rotate)) + (needed_fraction)*Shift(Point::Basis(2)*(cells_to_rotate-1));
         		// m_right_shift = (1.0)*Shift(Point::Basis(2)*(cells_to_rotate));
+				t1 = chrono::steady_clock::now();
+
 				BC_data_rotated = m_right_shift(BC_data);
 				for (auto dit : state.m_U)
 				{
 					BC_data_rotated.copyTo(state.m_BC[ dit]);
 				}
-				
+
+				t2 = chrono::steady_clock::now();	
+				BC_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
+				t1 = chrono::steady_clock::now();	
 				if (inputs.convTestType == 1 || inputs.timeIntegratorType == 1) {
 					eulerstep.advance(time,dt,state);
 				} else {
@@ -245,14 +241,20 @@ int main(int argc, char* argv[])
 						rk4.advance(time,dt,state);
 					}
 				}
+				t2 = chrono::steady_clock::now();	
+				euler_rk4_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 				if (takeviscositystep) {
 					// Take step for artificial viscosity
 					viscositystep.advance(time,dt,state);
 				}
+
+				t1 = chrono::steady_clock::now();
 				if (inputs.takedivBstep == 1) {
 					// Take step for divB term
 					divBstep.advance(time,dt,state);
 				}
+				t2 = chrono::steady_clock::now();	
+				divB_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 				time += dt;
 			}
 			
@@ -303,8 +305,6 @@ int main(int argc, char* argv[])
 					
 					h5.setTime(time);
 					h5.setTimestep(dt);
-					out_data.defineExchange<PolarExchangeCopier>(2,1);
-					out_data.exchange(); 
 					#if DIM == 2
 					h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_Data);
 					#endif
@@ -334,6 +334,13 @@ int main(int argc, char* argv[])
 
 		}	
 		outputFile.close();
+
+		if(pid==0) cout << "p_fix_time " << p_fix_time / inputs.maxStep << endl;
+		if(pid==0) cout << "dt_time " << dt_time / inputs.maxStep << endl;
+		if(pid==0) cout << "BC_time " << BC_time / inputs.maxStep << endl;
+		if(pid==0) cout << "euler_rk4_time " << euler_rk4_time / inputs.maxStep << endl;
+		if(pid==0) cout << "divB_time " << divB_time / inputs.maxStep << endl;
+
 
 		if (inputs.convTestType != 0) {
 			//Solution on a single patch
