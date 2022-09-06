@@ -1934,4 +1934,18 @@ namespace MHD_Mapping {
 	{
 		forallInPlace_p(Correct_V_theta_phi_at_poles_calc, a_U_Sph_ave, a_dx, a_dy, a_dz);
 	}
+
+	void Spherical_2O_map_filling_func(MHDLevelDataState& a_state)
+	{
+		for (auto dit : a_state.m_cell_volume){	
+			Box dbx0 = a_state.m_cell_volume[dit].box();
+			MHD_Mapping::get_cell_volume(a_state.m_cell_volume[dit],dbx0,a_state.m_dx,a_state.m_dy,a_state.m_dz);
+			MHD_Mapping::get_face_area(a_state.m_face_area[dit],dbx0,a_state.m_dx,a_state.m_dy,a_state.m_dz);
+			MHD_Mapping::get_delta_sph_coords(a_state.m_dx_sph[dit],dbx0,a_state.m_dx,a_state.m_dy,a_state.m_dz);
+			MHD_Mapping::get_sph_coords_cc(a_state.m_x_sph_cc[dit],dbx0,a_state.m_dx, a_state.m_dy, a_state.m_dz);
+			MHD_Mapping::get_sph_coords_fc(a_state.m_x_sph_fc_1[dit], dbx0, a_state.m_dx, a_state.m_dy, a_state.m_dz, 0);
+			MHD_Mapping::get_sph_coords_fc(a_state.m_x_sph_fc_2[dit], dbx0, a_state.m_dx, a_state.m_dy, a_state.m_dz, 1);
+			MHD_Mapping::get_sph_coords_fc(a_state.m_x_sph_fc_3[dit], dbx0, a_state.m_dx, a_state.m_dy, a_state.m_dz, 2);
+		}
+	}
 }

@@ -226,6 +226,7 @@ namespace MHD_Mapping {
 	void Correct_V_theta_phi_at_poles(BoxData<double,NUMCOMPS>& a_U_Sph_ave,
 	                             const double a_dx,
 	                             const double a_dy,
-	                             const double a_dz);							   
-
+	                             const double a_dz);				
+								 			   
+	void Spherical_2O_map_filling_func(MHDLevelDataState& a_state);
 }

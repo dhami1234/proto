@@ -63,6 +63,14 @@ public:
 	LevelBoxData<double,DIM*DIM> m_rrdotdetAA_3_avg;
 	LevelBoxData<double,DIM> m_rrdotncd2n_3_avg;
 	LevelBoxData<double,DIM> m_A_row_mag_3_avg;
+// Things needed by Second order Spherical
+	LevelBoxData<double,DIM> m_x_sph_cc;
+	LevelBoxData<double,DIM> m_x_sph_fc_1;
+	LevelBoxData<double,DIM> m_x_sph_fc_2;
+	LevelBoxData<double,DIM> m_x_sph_fc_3;
+	LevelBoxData<double,DIM> m_dx_sph;
+	LevelBoxData<double,DIM> m_face_area;
+	LevelBoxData<double,1> m_cell_volume;
 
 	DisjointBoxLayout m_dbl;
 	ProblemDomain m_probDom;

@@ -59,6 +59,14 @@ MHDLevelDataState::MHDLevelDataState(const ProblemDomain& a_probDom,
     m_rrdotdetAA_3_avg.define(m_dbl,Point::Ones(NGHOST));
     m_rrdotncd2n_3_avg.define(m_dbl,Point::Ones(NGHOST));
 	m_A_row_mag_3_avg.define(m_dbl,Point::Ones(NGHOST));
+
+	m_x_sph_cc.define(m_dbl,Point::Ones(NGHOST));
+	m_x_sph_fc_1.define(m_dbl,Point::Ones(NGHOST));
+	m_x_sph_fc_2.define(m_dbl,Point::Ones(NGHOST));
+	m_x_sph_fc_3.define(m_dbl,Point::Ones(NGHOST));
+	m_dx_sph.define(m_dbl,Point::Ones(NGHOST));
+	m_face_area.define(m_dbl,Point::Ones(NGHOST));
+	m_cell_volume.define(m_dbl,Point::Ones(NGHOST));
 }
 
 void MHDLevelDataState::increment(const MHDLevelDataDX& a_DX)
@@ -154,7 +162,7 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 				MHDOp::step_spherical(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit],(a_State.m_A_1_avg)[ dit],(a_State.m_A_2_avg)[ dit],(a_State.m_A_3_avg)[ dit],(a_State.m_A_inv_1_avg)[ dit],(a_State.m_A_inv_2_avg)[ dit],(a_State.m_A_inv_3_avg)[ dit],(a_State.m_detAA_avg)[ dit],(a_State.m_detAA_inv_avg)[ dit],(a_State.m_r2rdot_avg)[ dit],(a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit],(a_State.m_r2detA_1_avg)[ dit],(a_State.m_r2detAA_1_avg)[ dit], (a_State.m_r2detAn_1_avg)[ dit],(a_State.m_A_row_mag_1_avg)[ dit], (a_State.m_rrdotdetA_2_avg)[ dit],(a_State.m_rrdotdetAA_2_avg)[ dit],(a_State.m_rrdotd3ncn_2_avg)[ dit],(a_State.m_A_row_mag_2_avg)[ dit],(a_State.m_rrdotdetA_3_avg)[ dit],(a_State.m_rrdotdetAA_3_avg)[ dit],(a_State.m_rrdotncd2n_3_avg)[ dit],(a_State.m_A_row_mag_3_avg)[ dit], false, false);
 			}
 			if (inputs.Spherical_2nd_order == 1){
-				MHDOp::step_spherical_2O(a_DX.m_DU[ dit], a_State.m_divB[dit], dt_new, new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, false, false, a_State.m_divB_calculated, a_State.m_min_dt_calculated);
+				MHDOp::step_spherical_2O(a_DX.m_DU[ dit], a_State.m_divB[dit], dt_new, new_state[ dit],a_State.m_U[ dit].box(), a_State.m_x_sph_cc[dit], a_State.m_x_sph_fc_1[dit], a_State.m_x_sph_fc_2[dit], a_State.m_x_sph_fc_3[dit], a_State.m_dx_sph[dit], a_State.m_face_area[dit], a_State.m_cell_volume[dit], a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, a_State.m_divB_calculated, a_State.m_min_dt_calculated);
 			}
 		} else {
 		    MHDOp::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);

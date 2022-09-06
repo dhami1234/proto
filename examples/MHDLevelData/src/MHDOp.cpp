@@ -624,12 +624,17 @@ namespace MHDOp {
 						   double& a_min_dt,	
 	          const BoxData<double,NUMCOMPS>& a_U,
 	          const Box& a_rangeBox,
+			  BoxData<double,DIM>& a_x_sph_cc,
+			  BoxData<double,DIM>& a_x_sph_fc_1,
+			  BoxData<double,DIM>& a_x_sph_fc_2,
+			  BoxData<double,DIM>& a_x_sph_fc_3,
+			  BoxData<double,DIM>& a_dx_sph,
+			  BoxData<double,DIM>& a_face_area,
+			  BoxData<double,1>& a_cell_volume,
 	          const double a_dx,
 	          const double a_dy,
 	          const double a_dz,
 	          const double a_gamma,
-	          bool a_computeMaxWaveSpeed,
-	          bool a_callBCs,
 	          bool a_divB_calculated,
 	          bool a_min_dt_calculated)
 	{
@@ -655,22 +660,22 @@ namespace MHDOp {
 
 		double gamma = a_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz};
-		BoxData<double,DIM> x_sph_cc(dbx0), x_sph_fc(dbx0), dx_sph(dbx0), face_area(dbx0);
-		BoxData<double,1> cell_volume(dbx0);
 		Vector F_f_sph(dbx0), F_f(dbx0), F_f_scaled(dbx0), Rhs_d(dbx0), RhsV(dbx0);
 		Vector B_f_sph(dbx0), B_f(dbx0), B_f_scaled(dbx0), Rhs_d_divB(dbx0), RhsV_divB(dbx0);
 		RhsV.setVal(0.0);
 		RhsV_divB.setVal(0.0);
 		
-
-		MHD_Mapping::get_cell_volume(cell_volume,dbx0,a_dx,a_dy,a_dz);
-		MHD_Mapping::get_face_area(face_area,dbx0,a_dx,a_dy,a_dz);
-		MHD_Mapping::get_delta_sph_coords(dx_sph,dbx0,a_dx,a_dy,a_dz);
+		// MHD_Mapping::get_cell_volume(a_cell_volume,dbx0,a_dx,a_dy,a_dz);
+		// MHD_Mapping::get_face_area(a_face_area,dbx0,a_dx,a_dy,a_dz);
+		// MHD_Mapping::get_delta_sph_coords(a_dx_sph,dbx0,a_dx,a_dy,a_dz);
+		// MHD_Mapping::get_sph_coords_fc(a_x_sph_fc_1, dbx0, a_dx, a_dy, a_dz, 0);
+		// MHD_Mapping::get_sph_coords_fc(a_x_sph_fc_2, dbx0, a_dx, a_dy, a_dz, 1);
+		// MHD_Mapping::get_sph_coords_fc(a_x_sph_fc_3, dbx0, a_dx, a_dy, a_dz, 2);
+		// MHD_Mapping::get_sph_coords_cc(a_x_sph_cc,dbx0,a_dx, a_dy, a_dz);
 
 		BoxData<double,NUMCOMPS> W_sph(dbx0);
-		MHD_Mapping::get_sph_coords_cc(x_sph_cc,dbx0,a_dx, a_dy, a_dz);
 		Vector W_cart  = forall<double,NUMCOMPS>(consToPrim, a_U, gamma);
-		MHD_Mapping::Cartesian_to_Spherical(W_sph, W_cart, x_sph_cc);
+		MHD_Mapping::Cartesian_to_Spherical(W_sph, W_cart, a_x_sph_cc);
 		MHD_Mapping::Correct_V_theta_phi_at_poles(W_sph, a_dx, a_dy, a_dz);	
 
 		if (!a_min_dt_calculated) MHD_CFL::Min_dt_calc_func(a_min_dt, W_sph, a_dx, a_dy, a_dz, gamma);		
@@ -679,25 +684,26 @@ namespace MHDOp {
 		{
 			Vector W_low_temp(dbx0), W_high_temp(dbx0);
 			Vector W_low(dbx0), W_high(dbx0);
-			MHD_Limiters::MHD_Limiters_minmod(W_low,W_high,W_sph,x_sph_cc,dx_sph,d);
+			MHD_Limiters::MHD_Limiters_minmod(W_low,W_high,W_sph,a_x_sph_cc,a_dx_sph,d);
 			MHD_Riemann_Solvers::Roe8Wave_Solver(F_f_sph,W_low,W_high,d,gamma);
-			MHD_Mapping::get_sph_coords_fc(x_sph_fc, dbx0, a_dx, a_dy, a_dz, d);
-			MHD_Mapping::Spherical_to_Cartesian(F_f, F_f_sph, x_sph_fc);
-			forallInPlace_p(Scale_with_A_Ff_calc, F_f_scaled, F_f, face_area, d);
+			if (d==0) MHD_Mapping::Spherical_to_Cartesian(F_f, F_f_sph, a_x_sph_fc_1);
+			if (d==1) MHD_Mapping::Spherical_to_Cartesian(F_f, F_f_sph, a_x_sph_fc_2);
+			if (d==2) MHD_Mapping::Spherical_to_Cartesian(F_f, F_f_sph, a_x_sph_fc_3);
+			forallInPlace_p(Scale_with_A_Ff_calc, F_f_scaled, F_f, a_face_area, d);
 			Rhs_d = m_divergence[d](F_f_scaled);
 			RhsV += Rhs_d;
 
 			if (!a_divB_calculated){
 				forallInPlace_p(B_face_calc, B_f_sph, W_low,W_high, d);
-				forallInPlace_p(Scale_with_A_Ff_calc, B_f_scaled, B_f_sph, face_area, d);
+				forallInPlace_p(Scale_with_A_Ff_calc, B_f_scaled, B_f_sph, a_face_area, d);
 				Rhs_d_divB = m_divergence[d](B_f_scaled);
 				RhsV_divB += Rhs_d_divB;
 			}
 		}
-		forallInPlace_p(Scale_with_V_calc, a_Rhs, RhsV, cell_volume);
+		forallInPlace_p(Scale_with_V_calc, a_Rhs, RhsV, a_cell_volume);
 
 		if (!a_divB_calculated){
-			forallInPlace_p(Scale_with_V_calc, a_Rhs_divB, RhsV_divB, cell_volume);
+			forallInPlace_p(Scale_with_V_calc, a_Rhs_divB, RhsV_divB, a_cell_volume);
 			Vector Powell_term = forall<double,NUMCOMPS>(Powell,W_cart);
 			a_Rhs_divB *= Powell_term;
 		}

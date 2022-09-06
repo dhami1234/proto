@@ -105,7 +105,12 @@ int main(int argc, char* argv[])
 		std::cout << "proc_id: " << pid << ";      num boxes: " << count << std::endl;
 
 		if (inputs.grid_type_global == 2){
-			MHD_Mapping::Spherical_map_filling_func(state);
+			if (inputs.Spherical_2nd_order == 1){
+				MHD_Mapping::Spherical_2O_map_filling_func(state);
+				cout << "calculated" << endl;
+			} else {
+				MHD_Mapping::Spherical_map_filling_func(state);
+			}
 		} else {
 			MHD_Mapping::Regular_map_filling_func(state);
 		}
