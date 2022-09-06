@@ -671,16 +671,9 @@ namespace MHDOp {
 		MHD_Mapping::get_sph_coords_cc(x_sph_cc,dbx0,a_dx, a_dy, a_dz);
 		Vector W_cart  = forall<double,NUMCOMPS>(consToPrim, a_U, gamma);
 		MHD_Mapping::Cartesian_to_Spherical(W_sph, W_cart, x_sph_cc);
+		MHD_Mapping::Correct_V_theta_phi_at_poles(W_sph, a_dx, a_dy, a_dz);	
 
-		if (!a_min_dt_calculated){
-			// double min_dt;
-			MHD_CFL::Min_dt_calc_func(a_min_dt, W_sph, a_dx, a_dy, a_dz, gamma);
-			// a_min_dt = min_dt; 
-		} 
-
-		MHD_Mapping::Correct_V_theta_phi_at_poles(W_sph, a_dx, a_dy, a_dz);
-		
-		
+		if (!a_min_dt_calculated) MHD_CFL::Min_dt_calc_func(a_min_dt, W_sph, a_dx, a_dy, a_dz, gamma);		
 		
 		for (int d = 0; d < DIM; d++)
 		{

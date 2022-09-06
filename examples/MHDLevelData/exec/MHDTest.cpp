@@ -176,33 +176,23 @@ int main(int argc, char* argv[])
 		if(pid==0) cout << "starting time loop from step " << start_iter << " , maxStep = " << inputs.maxStep << endl;
 		ofstream outputFile;
     	outputFile.open(inputs.Probe_data_file,std::ios::app);
-		if(pid==0) outputFile << "---------------------" << endl;
+		if(pid==0) outputFile << endl;
 		double probe_cadence = 0;
-		// auto t1, t2;
-		auto t1 = chrono::steady_clock::now();
-		auto t2 = chrono::steady_clock::now();
-		double p_fix_time = 0, dt_time = 0, BC_time = 0, euler_rk4_time = 0, divB_time = 0;
 		for (int k = start_iter; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{	
 			auto start = chrono::steady_clock::now();
 			state.m_divB_calculated = false;
 			state.m_min_dt_calculated = false;
-			t1 = chrono::steady_clock::now();
 			for (auto dit : state.m_U){	
 				MHDOp::Fix_negative_P(state.m_U[ dit],inputs.gamma);	
 			}
-			t2 = chrono::steady_clock::now();	
-			p_fix_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 			if (k!=start_iter){
-				t1 = chrono::steady_clock::now();
 				if (k!=start_iter+1){
 					if (inputs.convTestType == 0){
 						dt = inputs.CFL*state.m_min_dt;
 						if ((inputs.tstop - time) < dt) dt = inputs.tstop - time;
 					}
 				}
-				t2 = chrono::steady_clock::now();	
-				dt_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 				// Below objects need to be created inside the time loop. Otherwise the init in dx keeps on eating memory
 				// This is used to take rk4 step
 				RK4<MHDLevelDataState,MHDLevelDataRK4Op,MHDLevelDataDX> rk4;
@@ -223,7 +213,6 @@ int main(int argc, char* argv[])
 				static Stencil<double> m_right_shift;
         		m_right_shift = (1.0-needed_fraction)*Shift(Point::Basis(2)*(cells_to_rotate)) + (needed_fraction)*Shift(Point::Basis(2)*(cells_to_rotate-1));
         		// m_right_shift = (1.0)*Shift(Point::Basis(2)*(cells_to_rotate));
-				t1 = chrono::steady_clock::now();
 
 				BC_data_rotated = m_right_shift(BC_data);
 				for (auto dit : state.m_U)
@@ -231,9 +220,6 @@ int main(int argc, char* argv[])
 					BC_data_rotated.copyTo(state.m_BC[ dit]);
 				}
 
-				t2 = chrono::steady_clock::now();	
-				BC_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
-				t1 = chrono::steady_clock::now();	
 				if (inputs.convTestType == 1 || inputs.timeIntegratorType == 1) {
 					eulerstep.advance(time,dt,state);
 				} else {
@@ -241,20 +227,15 @@ int main(int argc, char* argv[])
 						rk4.advance(time,dt,state);
 					}
 				}
-				t2 = chrono::steady_clock::now();	
-				euler_rk4_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 				if (takeviscositystep) {
 					// Take step for artificial viscosity
 					viscositystep.advance(time,dt,state);
 				}
 
-				t1 = chrono::steady_clock::now();
 				if (inputs.takedivBstep == 1) {
 					// Take step for divB term
 					divBstep.advance(time,dt,state);
 				}
-				t2 = chrono::steady_clock::now();	
-				divB_time += chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
 				time += dt;
 			}
 			
@@ -334,13 +315,6 @@ int main(int argc, char* argv[])
 
 		}	
 		outputFile.close();
-
-		if(pid==0) cout << "p_fix_time " << p_fix_time / inputs.maxStep << endl;
-		if(pid==0) cout << "dt_time " << dt_time / inputs.maxStep << endl;
-		if(pid==0) cout << "BC_time " << BC_time / inputs.maxStep << endl;
-		if(pid==0) cout << "euler_rk4_time " << euler_rk4_time / inputs.maxStep << endl;
-		if(pid==0) cout << "divB_time " << divB_time / inputs.maxStep << endl;
-
 
 		if (inputs.convTestType != 0) {
 			//Solution on a single patch
