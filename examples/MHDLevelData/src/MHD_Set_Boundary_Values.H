@@ -42,8 +42,4 @@ namespace MHD_Set_Boundary_Values {
 	                         const int a_lowBCtype,
 	                         const int a_highBCtype);
 
-	void Set_Zaxis_Values(BoxData<double,NUMCOMPS>& a_JU,
- 						  const ProblemDomain& a_probDomain,
- 	                      const BoxData<double,NUMCOMPS>& a_JU_pole);
-
 }

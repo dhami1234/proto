@@ -29,7 +29,7 @@ namespace MHD_Output_Writer {
    	                                       const double dy,
    	                                       const double dz,
    	                                       const string& filename_data);
-
+										   
         void WriteBoxData_Nsd_nocoord(BoxData<double,DIM*DIM>& out_data,
 	                                       const double dx,
 	                                       const double dy,

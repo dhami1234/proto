@@ -518,6 +518,21 @@ namespace MHDOp {
 	PROTO_KERNEL_END(Scale_with_A_Ff_calcF, Scale_with_A_Ff_calc)
 
 	PROTO_KERNEL_START
+	void Scale_with_A_Bf_calcF(const Point& a_pt,
+						Var<double,1>& a_B_scaled,
+						const State& a_W_sph1,
+	               		const State& a_W_sph2,
+	                   	Var<double,DIM>& a_face_area,
+	                   	int a_d)
+	{
+		double area = a_face_area(a_d);
+		double B_face = 0.5*(a_W_sph1(2+DIM+a_d)+a_W_sph2(2+DIM+a_d));
+		a_B_scaled(0) = -B_face*area;
+		
+	}
+	PROTO_KERNEL_END(Scale_with_A_Bf_calcF, Scale_with_A_Bf_calc)
+
+	PROTO_KERNEL_START
 	void Scale_with_V_calcF(const Point& a_pt,
 						Var<double,NUMCOMPS>& a_F_scaled,
 						Var<double,NUMCOMPS>& a_F,
@@ -530,6 +545,21 @@ namespace MHDOp {
 		}
 	}
 	PROTO_KERNEL_END(Scale_with_V_calcF, Scale_with_V_calc)
+
+
+	PROTO_KERNEL_START
+	void Scale_with_V2_calcF(const Point& a_pt,
+						Var<double,NUMCOMPS>& a_F_scaled,
+						Var<double,1>& a_F,
+	                   	Var<double,1>& a_cell_volume)
+	{
+		double volume = a_cell_volume(0);
+
+		for (int i = 0; i < NUMCOMPS; i++){
+			a_F_scaled(i) = a_F(0)/volume;
+		}
+	}
+	PROTO_KERNEL_END(Scale_with_V2_calcF, Scale_with_V2_calc)
 
 
 	PROTO_KERNEL_START
@@ -575,47 +605,49 @@ namespace MHDOp {
 	}
 	PROTO_KERNEL_END(Scale_Ff_calc2F, Scale_Ff_calc2)
 
-	PROTO_KERNEL_START
-	void PowellF(State&         a_P,
-	             const State&   a_W)
-	             //const Var<double,1>&  dot_pro_sum3)
-	{
 
+	PROTO_KERNEL_START
+	void PowellF(const Point& a_pt,
+				 State&         a_P,
+	             const State&   a_W,
+				 Var<double,1>& a_F,
+				 Var<double,1>& a_cell_volume)
+	{
+	double volume = a_cell_volume(0);
 #if DIM==2
-		a_P(0) = 0.;
-		a_P(1) = a_W(4)/4.0/PI;
-		a_P(2) = a_W(5)/4.0/PI;
-		a_P(3) = a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI;
-		//a_P(3) = a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI + dot_pro_sum3(0)/4.0/PI;
-		a_P(4) = a_W(1);
-		a_P(5) = a_W(2);
+		a_P(0) = (a_F(0)/volume)*0.;
+		a_P(1) = (a_F(0)/volume)*a_W(4)/4.0/PI;
+		a_P(2) = (a_F(0)/volume)*a_W(5)/4.0/PI;
+		a_P(3) = (a_F(0)/volume)*(a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI);
+		a_P(4) = (a_F(0)/volume)*a_W(1);
+		a_P(5) = (a_F(0)/volume)*a_W(2);
 #endif
 
 #if DIM==3
-		a_P(0) = 0.;
-		a_P(1) = a_W(5)/4.0/PI;
-		a_P(2) = a_W(6)/4.0/PI;
-		a_P(3) = a_W(7)/4.0/PI;
-		a_P(4) = a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI;
-		//a_P(4) = a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI + dot_pro_sum3(0)/4.0/PI;
-		a_P(5) = a_W(1);
-		a_P(6) = a_W(2);
-		a_P(7) = a_W(3);
+		a_P(0) = (a_F(0)/volume)*0.;
+		a_P(1) = (a_F(0)/volume)*a_W(5)/4.0/PI;
+		a_P(2) = (a_F(0)/volume)*a_W(6)/4.0/PI;
+		a_P(3) = (a_F(0)/volume)*a_W(7)/4.0/PI;
+		a_P(4) = (a_F(0)/volume)*(a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI);
+		a_P(5) = (a_F(0)/volume)*a_W(1);
+		a_P(6) = (a_F(0)/volume)*a_W(2);
+		a_P(7) = (a_F(0)/volume)*a_W(3);
 
 #endif
 	}
 	PROTO_KERNEL_END(PowellF, Powell)
 
+
+
+
 	PROTO_KERNEL_START
 	void B_face_calcF(const Point& a_pt,
-                    State& a_B_face,
+                    Var<double,1>& a_B_face,
 	               const State& a_W_sph1,
 	               const State& a_W_sph2,
 	               int a_d)
 	{
-		for (int i=0; i< NUMCOMPS; i++) {
-			a_B_face(i) = 0.5*(a_W_sph1(2+DIM+a_d)+a_W_sph1(2+DIM+a_d));
-		}
+		a_B_face(0) = 0.5*(a_W_sph1(2+DIM+a_d)+a_W_sph2(2+DIM+a_d));
 	}
 	PROTO_KERNEL_END(B_face_calcF, B_face_calc)
 
@@ -638,41 +670,30 @@ namespace MHDOp {
 	          bool a_divB_calculated,
 	          bool a_min_dt_calculated)
 	{
-
+		// auto t1 = chrono::steady_clock::now();
+		// int pid = procID();
 		Box dbx0 = a_U.box();
-
-		static Stencil<double> m_interp_f_2nd[DIM];
 		static Stencil<double> m_divergence[DIM];
 		static bool initialized = false;
 		if(!initialized)
 		{
 			for (int dir = 0; dir < DIM; dir++)
 			{
-				m_interp_f_2nd[dir] = 0.5*Shift(Point::Zeros()) + 0.5*Shift(-Point::Basis(dir)); 
 				m_divergence[dir] = Stencil<double>::FluxDivergence(dir);
 			}
 			initialized =  true;
 		}
 
 		using namespace std;
-		a_Rhs.setVal(0.0);
-		if (!a_divB_calculated) a_Rhs_divB.setVal(0.0);
-
+		
 		double gamma = a_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz};
 		Vector F_f_sph(dbx0), F_f(dbx0), F_f_scaled(dbx0), Rhs_d(dbx0), RhsV(dbx0);
-		Vector B_f_sph(dbx0), B_f(dbx0), B_f_scaled(dbx0), Rhs_d_divB(dbx0), RhsV_divB(dbx0);
+		Scalar B_f_sph(dbx0), B_f_scaled(dbx0), Rhs_d_divB(dbx0), RhsV_divB(dbx0);
 		RhsV.setVal(0.0);
 		RhsV_divB.setVal(0.0);
-		
-		// MHD_Mapping::get_cell_volume(a_cell_volume,dbx0,a_dx,a_dy,a_dz);
-		// MHD_Mapping::get_face_area(a_face_area,dbx0,a_dx,a_dy,a_dz);
-		// MHD_Mapping::get_delta_sph_coords(a_dx_sph,dbx0,a_dx,a_dy,a_dz);
-		// MHD_Mapping::get_sph_coords_fc(a_x_sph_fc_1, dbx0, a_dx, a_dy, a_dz, 0);
-		// MHD_Mapping::get_sph_coords_fc(a_x_sph_fc_2, dbx0, a_dx, a_dy, a_dz, 1);
-		// MHD_Mapping::get_sph_coords_fc(a_x_sph_fc_3, dbx0, a_dx, a_dy, a_dz, 2);
-		// MHD_Mapping::get_sph_coords_cc(a_x_sph_cc,dbx0,a_dx, a_dy, a_dz);
 
+		Vector W_low_temp(dbx0), W_high_temp(dbx0), W_low(dbx0), W_high(dbx0);
 		BoxData<double,NUMCOMPS> W_sph(dbx0);
 		Vector W_cart  = forall<double,NUMCOMPS>(consToPrim, a_U, gamma);
 		MHD_Mapping::Cartesian_to_Spherical(W_sph, W_cart, a_x_sph_cc);
@@ -682,8 +703,6 @@ namespace MHDOp {
 		
 		for (int d = 0; d < DIM; d++)
 		{
-			Vector W_low_temp(dbx0), W_high_temp(dbx0);
-			Vector W_low(dbx0), W_high(dbx0);
 			MHD_Limiters::MHD_Limiters_minmod(W_low,W_high,W_sph,a_x_sph_cc,a_dx_sph,d);
 			MHD_Riemann_Solvers::Roe8Wave_Solver(F_f_sph,W_low,W_high,d,gamma);
 			if (d==0) MHD_Mapping::Spherical_to_Cartesian(F_f, F_f_sph, a_x_sph_fc_1);
@@ -694,18 +713,14 @@ namespace MHDOp {
 			RhsV += Rhs_d;
 
 			if (!a_divB_calculated){
-				forallInPlace_p(B_face_calc, B_f_sph, W_low,W_high, d);
-				forallInPlace_p(Scale_with_A_Ff_calc, B_f_scaled, B_f_sph, a_face_area, d);
+				forallInPlace_p(Scale_with_A_Bf_calc, B_f_scaled, W_low,W_high, a_face_area, d);
 				Rhs_d_divB = m_divergence[d](B_f_scaled);
 				RhsV_divB += Rhs_d_divB;
 			}
 		}
 		forallInPlace_p(Scale_with_V_calc, a_Rhs, RhsV, a_cell_volume);
-
-		if (!a_divB_calculated){
-			forallInPlace_p(Scale_with_V_calc, a_Rhs_divB, RhsV_divB, a_cell_volume);
-			Vector Powell_term = forall<double,NUMCOMPS>(Powell,W_cart);
-			a_Rhs_divB *= Powell_term;
-		}
+		if (!a_divB_calculated) forallInPlace_p(Powell,a_Rhs_divB,W_cart,RhsV_divB,a_cell_volume);	
+		// auto t2 = chrono::steady_clock::now();	
+		// if(pid==0) cout << " Time taken by in Op: " << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"  << endl;		
 	}
 }

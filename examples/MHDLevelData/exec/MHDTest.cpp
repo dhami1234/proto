@@ -107,7 +107,6 @@ int main(int argc, char* argv[])
 		if (inputs.grid_type_global == 2){
 			if (inputs.Spherical_2nd_order == 1){
 				MHD_Mapping::Spherical_2O_map_filling_func(state);
-				cout << "calculated" << endl;
 			} else {
 				MHD_Mapping::Spherical_map_filling_func(state);
 			}
@@ -216,14 +215,15 @@ int main(int argc, char* argv[])
 				cells_to_rotate = cells_to_rotate % inputs.domainSizez;
 				cells_to_rotate = inputs.domainSizez - cells_to_rotate;
 				static Stencil<double> m_right_shift;
-        		m_right_shift = (1.0-needed_fraction)*Shift(Point::Basis(2)*(cells_to_rotate)) + (needed_fraction)*Shift(Point::Basis(2)*(cells_to_rotate-1));
-        		// m_right_shift = (1.0)*Shift(Point::Basis(2)*(cells_to_rotate));
-
-				BC_data_rotated = m_right_shift(BC_data);
+				m_right_shift = (1.0-needed_fraction)*Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(2));
+				Box dbx0 = BC_data.box();
 				for (auto dit : state.m_U)
-				{
+				{	
+					BC_data.copyTo(state.m_BC[ dit],dbx0,Point::Basis(2)*(-cells_to_rotate));
+					BC_data_rotated = m_right_shift(state.m_BC[ dit]);
 					BC_data_rotated.copyTo(state.m_BC[ dit]);
 				}
+
 
 				if (inputs.convTestType == 1 || inputs.timeIntegratorType == 1) {
 					eulerstep.advance(time,dt,state);

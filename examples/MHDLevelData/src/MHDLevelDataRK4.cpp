@@ -5,6 +5,12 @@
 #include "MHD_Input_Parsing.H"
 #include "MHD_Constants.H"
 #include "PolarExchangeCopier.H"
+
+// For Chrono Timer (Talwinder)
+#include <chrono>
+#include <iostream>
+#include <iomanip>
+
 extern Parsefrominputs inputs;
 
 MHDLevelDataState::MHDLevelDataState()
@@ -128,7 +134,9 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
                                    double a_dt,
                                    MHDLevelDataState& a_State
 								   )
-{
+{	
+	// auto t1 = chrono::steady_clock::now();
+	// int pid = procID();
 	LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
 	auto idOp = (1.0)*Shift(Point::Zeros());
 	// (a_State.m_U).copyTo(new_state); // LevelBoxData copyTo doesn't copy ghost cells. Needs exchange if this is used
@@ -141,6 +149,7 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 	new_state.defineExchange<PolarExchangeCopier>(2,1);
 	new_state.exchange(); 
 
+	
 	for (auto dit : new_state){	
         if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
 			if (inputs.Spherical_2nd_order == 0){
@@ -152,6 +161,8 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 			}
 		} 
 	}
+	// auto t2 = chrono::steady_clock::now();	
+	// if(pid==0) cout << " Time taken till filling GCs: " << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"  << endl;	
 
 	double dt_temp = 1.0e10;
 	double dt_new;
