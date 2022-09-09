@@ -89,12 +89,12 @@ namespace MHD_Mapping {
 		if (inputs.grid_type_global == 1) {
 			double C1 = inputs.C1_fix;
 			double C2 = C1;
-			a_x(0) = a_eta(0) + C1*sin(2.0*PI*a_eta(0))*sin(2.0*PI*a_eta(1));
-			a_x(1) = a_eta(1) + C2*sin(2.0*PI*a_eta(0))*sin(2.0*PI*a_eta(1));
+			a_x(0) = a_eta(0) + C1*sin(2.0*c_PI*a_eta(0))*sin(2.0*c_PI*a_eta(1));
+			a_x(1) = a_eta(1) + C2*sin(2.0*c_PI*a_eta(0))*sin(2.0*c_PI*a_eta(1));
 		}
 		if (inputs.grid_type_global == 2) {
-			a_x(0) = (inputs.r_in*AU + a_eta(0)*(inputs.r_out*AU-inputs.r_in*AU))*cos(2.0*PI*a_eta(1));
-			a_x(1) = (inputs.r_in*AU + a_eta(0)*(inputs.r_out*AU-inputs.r_in*AU))*sin(2.0*PI*a_eta(1));
+			a_x(0) = (inputs.r_in*c_AU + a_eta(0)*(inputs.r_out*c_AU-inputs.r_in*c_AU))*cos(2.0*c_PI*a_eta(1));
+			a_x(1) = (inputs.r_in*c_AU + a_eta(0)*(inputs.r_out*c_AU-inputs.r_in*c_AU))*sin(2.0*c_PI*a_eta(1));
 		}
 #endif
 #if DIM == 3
@@ -105,32 +105,32 @@ namespace MHD_Mapping {
 		}
 		if (inputs.grid_type_global == 2) {
 			if (inputs.Spherical_2nd_order == 0){
-				double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
-				double r = inputs.r_in*AU + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
-				a_x(0) = r*sin(PI*a_eta(1))*cos(2.0*PI*a_eta(2));
-				a_x(1) = r*sin(PI*a_eta(1))*sin(2.0*PI*a_eta(2));
-				a_x(2) = r*cos(PI*a_eta(1));
+				double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
+				double r = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
+				a_x(0) = r*sin(c_PI*a_eta(1))*cos(2.0*c_PI*a_eta(2));
+				a_x(1) = r*sin(c_PI*a_eta(1))*sin(2.0*c_PI*a_eta(2));
+				a_x(2) = r*cos(c_PI*a_eta(1));
 			}
 			if (inputs.Spherical_2nd_order == 1){
-				double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
-				double r = inputs.r_in*AU + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
-				double theta = PI*a_eta(1);
-				double phi = 2.0*PI*a_eta(2);
+				double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
+				double r = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
+				double theta = c_PI*a_eta(1);
+				double phi = 2.0*c_PI*a_eta(2);
 
 				if (theta < 0){
 					theta = -theta;
-					if (phi < PI){
-						phi = phi + PI;
+					if (phi < c_PI){
+						phi = phi + c_PI;
 					} else {
-						phi = phi - PI;
+						phi = phi - c_PI;
 					}
 				}
-				if (theta > PI){
-					theta = PI - (theta - PI);
-					if (phi < PI){
-						phi = phi + PI;
+				if (theta > c_PI){
+					theta = c_PI - (theta - c_PI);
+					if (phi < c_PI){
+						phi = phi + c_PI;
 					} else {
-						phi = phi - PI;
+						phi = phi - c_PI;
 					}
 				}
 
@@ -152,12 +152,12 @@ namespace MHD_Mapping {
 	               const double a_dy,
 	               const double a_dz)
 	{
-		double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
-		double r = inputs.r_in*AU + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
+		double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
+		double r = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
  
-		a_x(0) = (2*cos(2*a_eta(2)*PI)*sin(a_dz*PI)*sin((a_dy*PI)/2.)*sin(a_eta(1)*PI)*(inputs.C_rad*a_dx*(inputs.r_in*AU - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dz*a_dy*pow(PI,2));
-		a_x(1) = (2*sin(a_dz*PI)*sin((a_dy*PI)/2.)*sin(2*a_eta(2)*PI)*sin(a_eta(1)*PI)*(inputs.C_rad*a_dx*(inputs.r_in*AU - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dz*a_dy*pow(PI,2));
-		a_x(2) = (2*cos(a_eta(1)*PI)*sin((a_dy*PI)/2.)*(inputs.C_rad*a_dx*(inputs.r_in*AU - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dy*PI);
+		a_x(0) = (2*cos(2*a_eta(2)*c_PI)*sin(a_dz*c_PI)*sin((a_dy*c_PI)/2.)*sin(a_eta(1)*c_PI)*(inputs.C_rad*a_dx*(inputs.r_in*c_AU - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dz*a_dy*pow(c_PI,2));
+		a_x(1) = (2*sin(a_dz*c_PI)*sin((a_dy*c_PI)/2.)*sin(2*a_eta(2)*c_PI)*sin(a_eta(1)*c_PI)*(inputs.C_rad*a_dx*(inputs.r_in*c_AU - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dz*a_dy*pow(c_PI,2));
+		a_x(2) = (2*cos(a_eta(1)*c_PI)*sin((a_dy*c_PI)/2.)*(inputs.C_rad*a_dx*(inputs.r_in*c_AU - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dy*c_PI);
 	}
 	PROTO_KERNEL_END(eta_to_x_aveF, eta_to_x_ave)
 
@@ -256,26 +256,26 @@ namespace MHD_Mapping {
 		if (inputs.grid_type_global == 1) {
 			double C1 = inputs.C1_fix;
 			double C2 = C1;
-			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = ((x_lo*y_hi-(C1/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_hi))
-				                                  -(x_lo*y_lo-(C1/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_lo)))/DIM/a_dy;
-			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = ((y_hi*y_hi/2.0-(C2/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_hi))
-				                                  -(y_lo*y_lo/2.0-(C2/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_lo)))/DIM/a_dy;
-			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = ((x_hi*x_hi/2.0-(C1/2./PI)*cos(2.*PI*x_hi)*sin(2.*PI*y_lo))
-				                                  -(x_lo*x_lo/2.0-(C1/2./PI)*cos(2.*PI*x_lo)*sin(2.*PI*y_lo)))/DIM/a_dx;
-			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = ((x_hi*y_lo-(C2/2./PI)*cos(2.*PI*x_hi)*sin(2.*PI*y_lo))
-				                                  -(x_lo*y_lo-(C2/2./PI)*cos(2.*PI*x_lo)*sin(2.*PI*y_lo)))/DIM/a_dx;
+			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = ((x_lo*y_hi-(C1/2./c_PI)*sin(2.*c_PI*x_lo)*cos(2.*c_PI*y_hi))
+				                                  -(x_lo*y_lo-(C1/2./c_PI)*sin(2.*c_PI*x_lo)*cos(2.*c_PI*y_lo)))/DIM/a_dy;
+			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = ((y_hi*y_hi/2.0-(C2/2./c_PI)*sin(2.*c_PI*x_lo)*cos(2.*c_PI*y_hi))
+				                                  -(y_lo*y_lo/2.0-(C2/2./c_PI)*sin(2.*c_PI*x_lo)*cos(2.*c_PI*y_lo)))/DIM/a_dy;
+			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = ((x_hi*x_hi/2.0-(C1/2./c_PI)*cos(2.*c_PI*x_hi)*sin(2.*c_PI*y_lo))
+				                                  -(x_lo*x_lo/2.0-(C1/2./c_PI)*cos(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/DIM/a_dx;
+			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = ((x_hi*y_lo-(C2/2./c_PI)*cos(2.*c_PI*x_hi)*sin(2.*c_PI*y_lo))
+				                                  -(x_lo*y_lo-(C2/2./c_PI)*cos(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/DIM/a_dx;
 		}
 
 		if (inputs.grid_type_global == 2) {
-			double r_diff = inputs.r_out*AU-inputs.r_in*AU;
-			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = (((inputs.r_in*AU+x_lo*r_diff)*sin(2.*PI*y_hi)/2./PI)
-				                                  -((inputs.r_in*AU+x_lo*r_diff)*sin(2.*PI*y_lo)/2./PI))/DIM/a_dy;
-			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = -(((inputs.r_in*AU+x_lo*r_diff)*cos(2.*PI*y_hi)/2./PI)
-				                                   -((inputs.r_in*AU+x_lo*r_diff)*cos(2.*PI*y_lo)/2./PI))/DIM/a_dy;
-			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = (((inputs.r_in*AU*x_hi+x_hi*x_hi*r_diff/2.0)*cos(2.*PI*y_lo))
-				                                  -((inputs.r_in*AU*x_lo+x_lo*x_lo*r_diff/2.0)*cos(2.*PI*y_lo)))/DIM/a_dx;
-			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = (((inputs.r_in*AU*x_hi+x_hi*x_hi*r_diff/2.0)*sin(2.*PI*y_lo))
-				                                  -((inputs.r_in*AU*x_lo+x_lo*x_lo*r_diff/2.0)*sin(2.*PI*y_lo)))/DIM/a_dx;
+			double r_diff = inputs.r_out*c_AU-inputs.r_in*c_AU;
+			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = (((inputs.r_in*c_AU+x_lo*r_diff)*sin(2.*c_PI*y_hi)/2./c_PI)
+				                                  -((inputs.r_in*c_AU+x_lo*r_diff)*sin(2.*c_PI*y_lo)/2./c_PI))/DIM/a_dy;
+			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = -(((inputs.r_in*c_AU+x_lo*r_diff)*cos(2.*c_PI*y_hi)/2./c_PI)
+				                                   -((inputs.r_in*c_AU+x_lo*r_diff)*cos(2.*c_PI*y_lo)/2./c_PI))/DIM/a_dy;
+			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = (((inputs.r_in*c_AU*x_hi+x_hi*x_hi*r_diff/2.0)*cos(2.*c_PI*y_lo))
+				                                  -((inputs.r_in*c_AU*x_lo+x_lo*x_lo*r_diff/2.0)*cos(2.*c_PI*y_lo)))/DIM/a_dx;
+			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = (((inputs.r_in*c_AU*x_hi+x_hi*x_hi*r_diff/2.0)*sin(2.*c_PI*y_lo))
+				                                  -((inputs.r_in*c_AU*x_lo+x_lo*x_lo*r_diff/2.0)*sin(2.*c_PI*y_lo)))/DIM/a_dx;
 		}
 #endif
 
@@ -328,26 +328,26 @@ namespace MHD_Mapping {
 		if (inputs.grid_type_global == 1) {
 			double C1 = inputs.C1_fix;
 			double C2 = C1;
-			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = ((y_hi+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
-				                                  -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
-			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -((x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
-				                                   -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
-			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -((y_lo+C2*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
-				                                   -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
-			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = ((x_hi+C1*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
-				                                  -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
+			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = ((y_hi+C2*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_hi))
+				                                  -(y_lo+C2*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dy;
+			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -((x_lo+C1*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_hi))
+				                                   -(x_lo+C1*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dy;
+			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -((y_lo+C2*sin(2.*c_PI*x_hi)*sin(2.*c_PI*y_lo))
+				                                   -(y_lo+C2*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dx;
+			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = ((x_hi+C1*sin(2.*c_PI*x_hi)*sin(2.*c_PI*y_lo))
+				                                  -(x_lo+C1*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dx;
 		}
 
 		if (inputs.grid_type_global == 2) {
-			double r_diff = inputs.r_out*AU-inputs.r_in*AU;
-			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = (((inputs.r_in*AU + x_lo*r_diff)*sin(2.*PI*y_hi))
-				                                  -((inputs.r_in*AU + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
-			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -(((inputs.r_in*AU + x_lo*r_diff)*cos(2.*PI*y_hi))
-				                                   -((inputs.r_in*AU + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
-			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -(((inputs.r_in*AU + x_hi*r_diff)*sin(2.*PI*y_lo))
-				                                   -((inputs.r_in*AU + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
-			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = (((inputs.r_in*AU + x_hi*r_diff)*cos(2.*PI*y_lo))
-				                                  -((inputs.r_in*AU + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
+			double r_diff = inputs.r_out*c_AU-inputs.r_in*c_AU;
+			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = (((inputs.r_in*c_AU + x_lo*r_diff)*sin(2.*c_PI*y_hi))
+				                                  -((inputs.r_in*c_AU + x_lo*r_diff)*sin(2.*c_PI*y_lo)))/a_dy;
+			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -(((inputs.r_in*c_AU + x_lo*r_diff)*cos(2.*c_PI*y_hi))
+				                                   -((inputs.r_in*c_AU + x_lo*r_diff)*cos(2.*c_PI*y_lo)))/a_dy;
+			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -(((inputs.r_in*c_AU + x_hi*r_diff)*sin(2.*c_PI*y_lo))
+				                                   -((inputs.r_in*c_AU + x_lo*r_diff)*sin(2.*c_PI*y_lo)))/a_dx;
+			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = (((inputs.r_in*c_AU + x_hi*r_diff)*cos(2.*c_PI*y_lo))
+				                                  -((inputs.r_in*c_AU + x_lo*r_diff)*cos(2.*c_PI*y_lo)))/a_dx;
 		}
 #endif
 
@@ -392,26 +392,26 @@ namespace MHD_Mapping {
 		if (inputs.grid_type_global == 1) {
 			double C1 = inputs.C1_fix;
 			double C2 = C1;
-			a_N_ave_f(0) = ((y_hi+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
-			                -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
-			a_N_ave_f(1) = -((x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
-			                 -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
-			a_N_ave_f(2) = -((y_lo+C2*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
-			                 -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
-			a_N_ave_f(3) = ((x_hi+C1*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
-			                -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
+			a_N_ave_f(0) = ((y_hi+C2*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_hi))
+			                -(y_lo+C2*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dy;
+			a_N_ave_f(1) = -((x_lo+C1*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_hi))
+			                 -(x_lo+C1*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dy;
+			a_N_ave_f(2) = -((y_lo+C2*sin(2.*c_PI*x_hi)*sin(2.*c_PI*y_lo))
+			                 -(y_lo+C2*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dx;
+			a_N_ave_f(3) = ((x_hi+C1*sin(2.*c_PI*x_hi)*sin(2.*c_PI*y_lo))
+			                -(x_lo+C1*sin(2.*c_PI*x_lo)*sin(2.*c_PI*y_lo)))/a_dx;
 		}
 
 		if (inputs.grid_type_global == 2) {
-			double r_diff = inputs.r_out*AU-inputs.r_in*AU;
-			a_N_ave_f(0) = (((inputs.r_in*AU + x_lo*r_diff)*sin(2.*PI*y_hi))
-			                -((inputs.r_in*AU + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
-			a_N_ave_f(1) = -(((inputs.r_in*AU + x_lo*r_diff)*cos(2.*PI*y_hi))
-			                 -((inputs.r_in*AU + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
-			a_N_ave_f(2) = -(((inputs.r_in*AU + x_hi*r_diff)*sin(2.*PI*y_lo))
-			                 -((inputs.r_in*AU + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
-			a_N_ave_f(3) = (((inputs.r_in*AU + x_hi*r_diff)*cos(2.*PI*y_lo))
-			                -((inputs.r_in*AU + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
+			double r_diff = inputs.r_out*c_AU-inputs.r_in*c_AU;
+			a_N_ave_f(0) = (((inputs.r_in*c_AU + x_lo*r_diff)*sin(2.*c_PI*y_hi))
+			                -((inputs.r_in*c_AU + x_lo*r_diff)*sin(2.*c_PI*y_lo)))/a_dy;
+			a_N_ave_f(1) = -(((inputs.r_in*c_AU + x_lo*r_diff)*cos(2.*c_PI*y_hi))
+			                 -((inputs.r_in*c_AU + x_lo*r_diff)*cos(2.*c_PI*y_lo)))/a_dy;
+			a_N_ave_f(2) = -(((inputs.r_in*c_AU + x_hi*r_diff)*sin(2.*c_PI*y_lo))
+			                 -((inputs.r_in*c_AU + x_lo*r_diff)*sin(2.*c_PI*y_lo)))/a_dx;
+			a_N_ave_f(3) = (((inputs.r_in*c_AU + x_hi*r_diff)*cos(2.*c_PI*y_lo))
+			                -((inputs.r_in*c_AU + x_lo*r_diff)*cos(2.*c_PI*y_lo)))/a_dx;
 		}
 #endif
 
@@ -708,10 +708,10 @@ namespace MHD_Mapping {
 	                    const Var<double,NUMCOMPS>& a_W)
 	{
 		for (int i=0; i< DIM; i++) {
-			a_out_data(i) = a_phys_coords(i)/AU; // AU
+			a_out_data(i) = a_phys_coords(i)/c_AU; // c_AU
 		}
 		
-		a_out_data(DIM+0) = a_W(0)/mp; // /cm^3
+		a_out_data(DIM+0) = a_W(0)/c_MP; // /cm^3
 		a_out_data(DIM+1) = a_W(1)/1e5; // km/s
 		a_out_data(DIM+2) = a_W(2)/1e5; // km/s
 		a_out_data(DIM+3) = a_W(3)/1e5; // km/s
@@ -789,8 +789,8 @@ namespace MHD_Mapping {
 							  bool a_r_dir_turn)
 	{
 
-		double R0 = inputs.r_in*AU;
-		double R1 = inputs.r_out*AU;
+		double R0 = inputs.r_in*c_AU;
+		double R1 = inputs.r_out*c_AU;
 		double c = inputs.C_rad;
 		double Rt = (R1 - R0)/(exp(c) - 1.0);
 
@@ -829,14 +829,14 @@ namespace MHD_Mapping {
 		}
 		
 		if (!a_r_dir_turn){
-			a_detAA_avg(0)	=	-0.25*((-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE2*dE3);
-			a_detAA_avg(1)	=	(PI*sin(dE2*PI)*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(2.*dE2*dE3);
-			a_detAA_avg(2)	=	(PI*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-			a_detAA_avg(3)	=	-0.5*(sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-			a_detAA_avg(4)	=	(PI*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2*dE3);
-			a_detAA_avg(5)	=	(PI*(4*dE2*PI*cos(2*E3*PI)*sin(dE3*PI) - (sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))))/(2.*dE2*dE3);
-			a_detAA_avg(6)	=	(PI*sin(dE2*PI)*sin(2*E2*PI))/dE2;
-			a_detAA_avg(7)	=	(pow(PI,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(2.*dE2);
+			a_detAA_avg(0)	=	-0.25*((-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/(dE2*dE3);
+			a_detAA_avg(1)	=	(c_PI*sin(dE2*c_PI)*sin(2*E2*c_PI)*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/(2.*dE2*dE3);
+			a_detAA_avg(2)	=	(c_PI*sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*sin(2*E3*c_PI))/(dE2*dE3);
+			a_detAA_avg(3)	=	-0.5*(sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*sin(2*E3*c_PI))/(dE2*dE3);
+			a_detAA_avg(4)	=	(c_PI*sin(dE2*c_PI)*sin(dE3*c_PI)*sin(2*E2*c_PI)*sin(2*E3*c_PI))/(dE2*dE3);
+			a_detAA_avg(5)	=	(c_PI*(4*dE2*c_PI*cos(2*E3*c_PI)*sin(dE3*c_PI) - (sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI))))/(2.*dE2*dE3);
+			a_detAA_avg(6)	=	(c_PI*sin(dE2*c_PI)*sin(2*E2*c_PI))/dE2;
+			a_detAA_avg(7)	=	(pow(c_PI,2)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(2.*dE2);
 			a_detAA_avg(8)	=	0;
 
 			double det_detAA_avg = a_detAA_avg(0)*(a_detAA_avg(4)*a_detAA_avg(8) - a_detAA_avg(7)*a_detAA_avg(5)) - a_detAA_avg(1)*(a_detAA_avg(3)*a_detAA_avg(8) - a_detAA_avg(5)*a_detAA_avg(6)) + a_detAA_avg(2)*(a_detAA_avg(3)*a_detAA_avg(7) - a_detAA_avg(4)*a_detAA_avg(6));
@@ -852,10 +852,10 @@ namespace MHD_Mapping {
 			a_detAA_inv_avg(8) = (a_detAA_avg(0)*a_detAA_avg(4) - a_detAA_avg(1)*a_detAA_avg(3))/det_detAA_avg;
 
 			a_r2rdot_avg(0) = 1.0;
-			a_detA_avg(0)	=	(4*PI*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+			a_detA_avg(0)	=	(4*c_PI*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
 			a_A_row_mag_avg(0) = 1.0;
-			a_A_row_mag_avg(1) = PI;
-			a_A_row_mag_avg(2) = (4*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+			a_A_row_mag_avg(1) = c_PI;
+			a_A_row_mag_avg(2) = (4*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
 		}
 		if (a_r_dir_turn){
 			a_r2rdot_avg(0)	*=	(exp(c*((-3*dE1)/2. + E1))*(-1 + exp(c*dE1))*Rt*(3*exp(c*dE1)*pow(R0 - Rt,2) + 3*exp(c*((3*dE1)/2. + E1))*(R0 - Rt)*Rt + 3*exp((c*dE1)/2. + c*E1)*(R0 - Rt)*Rt + exp(2*c*E1)*pow(Rt,2) + exp(2*c*(dE1 + E1))*pow(Rt,2) + exp(c*(dE1 + 2*E1))*pow(Rt,2)))/(3.*dE1);
@@ -889,31 +889,31 @@ namespace MHD_Mapping {
 		}
 
 		if (!a_r_dir_turn){
-			a_r2detA_1_avg(0)	=	(4*PI*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
-			a_r2detAA_1_avg(0)	=	-0.5*(cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-			a_r2detAA_1_avg(1)	=	(PI*cos(2*E3*PI)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI))/(dE2*dE3);
-			a_r2detAA_1_avg(2)	=	(PI*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-			a_r2detAA_1_avg(3)	=	-0.5*(sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-			a_r2detAA_1_avg(4)	=	(PI*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2*dE3);
-			a_r2detAA_1_avg(5)	=	-((PI*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3));
-			a_r2detAA_1_avg(6)	=	(PI*sin(dE2*PI)*sin(2*E2*PI))/dE2;
-			a_r2detAA_1_avg(7)	=	(pow(PI,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(2.*dE2);
+			a_r2detA_1_avg(0)	=	(4*c_PI*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
+			a_r2detAA_1_avg(0)	=	-0.5*(cos(2*E3*c_PI)*sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(dE2*dE3);
+			a_r2detAA_1_avg(1)	=	(c_PI*cos(2*E3*c_PI)*sin(dE2*c_PI)*sin(dE3*c_PI)*sin(2*E2*c_PI))/(dE2*dE3);
+			a_r2detAA_1_avg(2)	=	(c_PI*sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*sin(2*E3*c_PI))/(dE2*dE3);
+			a_r2detAA_1_avg(3)	=	-0.5*(sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*sin(2*E3*c_PI))/(dE2*dE3);
+			a_r2detAA_1_avg(4)	=	(c_PI*sin(dE2*c_PI)*sin(dE3*c_PI)*sin(2*E2*c_PI)*sin(2*E3*c_PI))/(dE2*dE3);
+			a_r2detAA_1_avg(5)	=	-((c_PI*cos(2*E3*c_PI)*sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(dE2*dE3));
+			a_r2detAA_1_avg(6)	=	(c_PI*sin(dE2*c_PI)*sin(2*E2*c_PI))/dE2;
+			a_r2detAA_1_avg(7)	=	(pow(c_PI,2)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(2.*dE2);
 			a_r2detAA_1_avg(8)	=	0.0;
-			a_r2detAn_1_avg(0)	=	-0.5*(cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-			a_r2detAn_1_avg(1)	=	-0.5*(sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-			a_r2detAn_1_avg(2)	=	(PI*sin(dE2*PI)*sin(2*E2*PI))/dE2;
+			a_r2detAn_1_avg(0)	=	-0.5*(cos(2*E3*c_PI)*sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(dE2*dE3);
+			a_r2detAn_1_avg(1)	=	-0.5*(sin(dE3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*sin(2*E3*c_PI))/(dE2*dE3);
+			a_r2detAn_1_avg(2)	=	(c_PI*sin(dE2*c_PI)*sin(2*E2*c_PI))/dE2;
 			a_A_row_mag_1_avg(0) = 1.0;
-			a_A_row_mag_1_avg(1) = PI;
-			a_A_row_mag_1_avg(2) = (4*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+			a_A_row_mag_1_avg(1) = c_PI;
+			a_A_row_mag_1_avg(2) = (4*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
 
-			a_A_1_avg(0) = (2*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(dE3*PI)*sin(E2*PI))/(dE2*dE3*pow(PI,2));
-			a_A_1_avg(1) = (2*cos(E2*PI)*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(dE3*PI))/(dE2*dE3*PI);
-			a_A_1_avg(2) = (-4*sin((dE2*PI)/2.)*sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI))/(dE2*dE3*PI);
-			a_A_1_avg(3) = (2*sin((dE2*PI)/2.)*sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI))/(dE2*dE3*pow(PI,2));
-			a_A_1_avg(4) = (2*cos(E2*PI)*sin((dE2*PI)/2.)*sin(dE3*PI)*sin(2*E3*PI))/(dE2*dE3*PI);
-			a_A_1_avg(5) = (4*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(dE3*PI)*sin(E2*PI))/(dE2*dE3*PI);
-			a_A_1_avg(6) = (2*cos(E2*PI)*sin((dE2*PI)/2.))/(dE2*PI);
-			a_A_1_avg(7) = (-2*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+			a_A_1_avg(0) = (2*cos(2*E3*c_PI)*sin((dE2*c_PI)/2.)*sin(dE3*c_PI)*sin(E2*c_PI))/(dE2*dE3*pow(c_PI,2));
+			a_A_1_avg(1) = (2*cos(E2*c_PI)*cos(2*E3*c_PI)*sin((dE2*c_PI)/2.)*sin(dE3*c_PI))/(dE2*dE3*c_PI);
+			a_A_1_avg(2) = (-4*sin((dE2*c_PI)/2.)*sin(dE3*c_PI)*sin(E2*c_PI)*sin(2*E3*c_PI))/(dE2*dE3*c_PI);
+			a_A_1_avg(3) = (2*sin((dE2*c_PI)/2.)*sin(dE3*c_PI)*sin(E2*c_PI)*sin(2*E3*c_PI))/(dE2*dE3*pow(c_PI,2));
+			a_A_1_avg(4) = (2*cos(E2*c_PI)*sin((dE2*c_PI)/2.)*sin(dE3*c_PI)*sin(2*E3*c_PI))/(dE2*dE3*c_PI);
+			a_A_1_avg(5) = (4*cos(2*E3*c_PI)*sin((dE2*c_PI)/2.)*sin(dE3*c_PI)*sin(E2*c_PI))/(dE2*dE3*c_PI);
+			a_A_1_avg(6) = (2*cos(E2*c_PI)*sin((dE2*c_PI)/2.))/(dE2*c_PI);
+			a_A_1_avg(7) = (-2*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
 			a_A_1_avg(8) = 0.0;
 
 
@@ -974,31 +974,31 @@ namespace MHD_Mapping {
 		
 
 		if (!a_r_dir_turn){
-			a_rrdotdetA_2_avg(0)	=	(4*pow(PI,2)*sin(E2*PI));
-			a_rrdotdetAA_2_avg(0)	=	(2*PI*pow(sin(E2*PI),2)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
-			a_rrdotdetAA_2_avg(1)	=	(pow(PI,2)*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
-			a_rrdotdetAA_2_avg(2)	=	(-8*pow(PI,2)*sin(dE3*PI)*pow(sin(E2*PI),2)*sin(2*E3*PI))/(dE3);
-			a_rrdotdetAA_2_avg(3)	=	(4*PI*sin(dE3*PI)*pow(sin(E2*PI),2)*sin(2*E3*PI))/(dE3);
-			a_rrdotdetAA_2_avg(4)	=	(2*pow(PI,2)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE3);
-			a_rrdotdetAA_2_avg(5)	=	(4*pow(PI,2)*pow(sin(E2*PI),2)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
-			a_rrdotdetAA_2_avg(6)	=	(2*pow(PI,2)*sin(2*E2*PI));
-			a_rrdotdetAA_2_avg(7)	=	(-4*pow(PI,3)*pow(sin(E2*PI),2));
+			a_rrdotdetA_2_avg(0)	=	(4*pow(c_PI,2)*sin(E2*c_PI));
+			a_rrdotdetAA_2_avg(0)	=	(2*c_PI*pow(sin(E2*c_PI),2)*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/(dE3);
+			a_rrdotdetAA_2_avg(1)	=	(pow(c_PI,2)*sin(2*E2*c_PI)*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/(dE3);
+			a_rrdotdetAA_2_avg(2)	=	(-8*pow(c_PI,2)*sin(dE3*c_PI)*pow(sin(E2*c_PI),2)*sin(2*E3*c_PI))/(dE3);
+			a_rrdotdetAA_2_avg(3)	=	(4*c_PI*sin(dE3*c_PI)*pow(sin(E2*c_PI),2)*sin(2*E3*c_PI))/(dE3);
+			a_rrdotdetAA_2_avg(4)	=	(2*pow(c_PI,2)*sin(dE3*c_PI)*sin(2*E2*c_PI)*sin(2*E3*c_PI))/(dE3);
+			a_rrdotdetAA_2_avg(5)	=	(4*pow(c_PI,2)*pow(sin(E2*c_PI),2)*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/(dE3);
+			a_rrdotdetAA_2_avg(6)	=	(2*pow(c_PI,2)*sin(2*E2*c_PI));
+			a_rrdotdetAA_2_avg(7)	=	(-4*pow(c_PI,3)*pow(sin(E2*c_PI),2));
 			a_rrdotdetAA_2_avg(8)	=	0.0;
-			a_rrdotd3ncn_2_avg(0)	=	(sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
-			a_rrdotd3ncn_2_avg(1)	=	(2*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE3);
-			a_rrdotd3ncn_2_avg(2)	=	(-4*PI*pow(sin(E2*PI),2));
+			a_rrdotd3ncn_2_avg(0)	=	(sin(2*E2*c_PI)*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/(dE3);
+			a_rrdotd3ncn_2_avg(1)	=	(2*sin(dE3*c_PI)*sin(2*E2*c_PI)*sin(2*E3*c_PI))/(dE3);
+			a_rrdotd3ncn_2_avg(2)	=	(-4*c_PI*pow(sin(E2*c_PI),2));
 			a_A_row_mag_2_avg(0) = 1.0;
-			a_A_row_mag_2_avg(1) = PI;
-			a_A_row_mag_2_avg(2) = 2*PI*sin(E2*PI);
+			a_A_row_mag_2_avg(1) = c_PI;
+			a_A_row_mag_2_avg(2) = 2*c_PI*sin(E2*c_PI);
 
-			a_A_2_avg(0) = (cos(2*E3*PI)*sin(dE3*PI)*sin(E2*PI))/(dE3*PI);
-			a_A_2_avg(1) = (cos(E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(2.*dE3);
-			a_A_2_avg(2) = (-2*sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI))/dE3;
-			a_A_2_avg(3) = (sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI))/(dE3*PI);
-			a_A_2_avg(4) = (cos(E2*PI)*sin(dE3*PI)*sin(2*E3*PI))/dE3;
-			a_A_2_avg(5) = (sin(E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/dE3;
-			a_A_2_avg(6) = cos(E2*PI);
-			a_A_2_avg(7) = -(PI*sin(E2*PI));
+			a_A_2_avg(0) = (cos(2*E3*c_PI)*sin(dE3*c_PI)*sin(E2*c_PI))/(dE3*c_PI);
+			a_A_2_avg(1) = (cos(E2*c_PI)*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/(2.*dE3);
+			a_A_2_avg(2) = (-2*sin(dE3*c_PI)*sin(E2*c_PI)*sin(2*E3*c_PI))/dE3;
+			a_A_2_avg(3) = (sin(dE3*c_PI)*sin(E2*c_PI)*sin(2*E3*c_PI))/(dE3*c_PI);
+			a_A_2_avg(4) = (cos(E2*c_PI)*sin(dE3*c_PI)*sin(2*E3*c_PI))/dE3;
+			a_A_2_avg(5) = (sin(E2*c_PI)*(sin((dE3 - 2*E3)*c_PI) + sin((dE3 + 2*E3)*c_PI)))/dE3;
+			a_A_2_avg(6) = cos(E2*c_PI);
+			a_A_2_avg(7) = -(c_PI*sin(E2*c_PI));
 			a_A_2_avg(8) = 0.0;
 
 			double det_A_2_avg = a_A_2_avg(0)*(a_A_2_avg(4)*a_A_2_avg(8) - a_A_2_avg(7)*a_A_2_avg(5)) - a_A_2_avg(1)*(a_A_2_avg(3)*a_A_2_avg(8) - a_A_2_avg(5)*a_A_2_avg(6)) + a_A_2_avg(2)*(a_A_2_avg(3)*a_A_2_avg(7) - a_A_2_avg(4)*a_A_2_avg(6));
@@ -1059,31 +1059,31 @@ namespace MHD_Mapping {
 		
 		
 		if (!a_r_dir_turn){
-			a_rrdotdetA_3_avg(0)	=	(8*PI*sin((dE2*PI)/2.)*sin(E2*PI))/(dE2);
-			a_rrdotdetAA_3_avg(0)	=	-((cos(2*E3*PI)*PI*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2));
-			a_rrdotdetAA_3_avg(1)	=	(2*pow(PI,2)*cos(2*E3*PI)*sin(dE2*PI)*sin(2*E2*PI))/(dE2);
-			a_rrdotdetAA_3_avg(2)	=	(2*pow(PI,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2);
-			a_rrdotdetAA_3_avg(3)	=	-((PI*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2));
-			a_rrdotdetAA_3_avg(4)	=	(2*pow(PI,2)*sin(dE2*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2);
-			a_rrdotdetAA_3_avg(5)	=	(-2*pow(PI,2)*cos(2*E3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2);
-			a_rrdotdetAA_3_avg(6)	=	(2*PI*sin(dE2*PI)*sin(2*E2*PI))/(dE2);
-			a_rrdotdetAA_3_avg(7)	=	(pow(PI,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2);
+			a_rrdotdetA_3_avg(0)	=	(8*c_PI*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/(dE2);
+			a_rrdotdetAA_3_avg(0)	=	-((cos(2*E3*c_PI)*c_PI*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(dE2));
+			a_rrdotdetAA_3_avg(1)	=	(2*pow(c_PI,2)*cos(2*E3*c_PI)*sin(dE2*c_PI)*sin(2*E2*c_PI))/(dE2);
+			a_rrdotdetAA_3_avg(2)	=	(2*pow(c_PI,2)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*sin(2*E3*c_PI))/(dE2);
+			a_rrdotdetAA_3_avg(3)	=	-((c_PI*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI))*sin(2*E3*c_PI))/(dE2));
+			a_rrdotdetAA_3_avg(4)	=	(2*pow(c_PI,2)*sin(dE2*c_PI)*sin(2*E2*c_PI)*sin(2*E3*c_PI))/(dE2);
+			a_rrdotdetAA_3_avg(5)	=	(-2*pow(c_PI,2)*cos(2*E3*c_PI)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(dE2);
+			a_rrdotdetAA_3_avg(6)	=	(2*c_PI*sin(dE2*c_PI)*sin(2*E2*c_PI))/(dE2);
+			a_rrdotdetAA_3_avg(7)	=	(pow(c_PI,2)*(-2*dE2*c_PI + sin((dE2 - 2*E2)*c_PI) + sin((dE2 + 2*E2)*c_PI)))/(dE2);
 			a_rrdotdetAA_3_avg(8)	=	0.0;
-			a_rrdotncd2n_3_avg(0)	=	(-2*PI*sin(2*E3*PI));
-			a_rrdotncd2n_3_avg(1)	=	(2*PI*cos(2*E3*PI));
+			a_rrdotncd2n_3_avg(0)	=	(-2*c_PI*sin(2*E3*c_PI));
+			a_rrdotncd2n_3_avg(1)	=	(2*c_PI*cos(2*E3*c_PI));
 			a_rrdotncd2n_3_avg(2)	=	0.0;
 			a_A_row_mag_3_avg(0) = 1.0;
-			a_A_row_mag_3_avg(1) = PI;
-			a_A_row_mag_3_avg(2) = (4*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+			a_A_row_mag_3_avg(1) = c_PI;
+			a_A_row_mag_3_avg(2) = (4*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
 
-			a_A_3_avg(0) = (2*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(E2*PI))/(dE2*PI);
-			a_A_3_avg(1) = (2*cos(E2*PI)*cos(2*E3*PI)*sin((dE2*PI)/2.))/dE2;
-			a_A_3_avg(2) = (-4*sin((dE2*PI)/2.)*sin(E2*PI)*sin(2*E3*PI))/dE2;
-			a_A_3_avg(3) = (2*sin((dE2*PI)/2.)*sin(E2*PI)*sin(2*E3*PI))/(dE2*PI);
-			a_A_3_avg(4) = (2*cos(E2*PI)*sin((dE2*PI)/2.)*sin(2*E3*PI))/dE2;
-			a_A_3_avg(5) = (4*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
-			a_A_3_avg(6) = (2*cos(E2*PI)*sin((dE2*PI)/2.))/(dE2*PI);
-			a_A_3_avg(7) = (-2*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+			a_A_3_avg(0) = (2*cos(2*E3*c_PI)*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/(dE2*c_PI);
+			a_A_3_avg(1) = (2*cos(E2*c_PI)*cos(2*E3*c_PI)*sin((dE2*c_PI)/2.))/dE2;
+			a_A_3_avg(2) = (-4*sin((dE2*c_PI)/2.)*sin(E2*c_PI)*sin(2*E3*c_PI))/dE2;
+			a_A_3_avg(3) = (2*sin((dE2*c_PI)/2.)*sin(E2*c_PI)*sin(2*E3*c_PI))/(dE2*c_PI);
+			a_A_3_avg(4) = (2*cos(E2*c_PI)*sin((dE2*c_PI)/2.)*sin(2*E3*c_PI))/dE2;
+			a_A_3_avg(5) = (4*cos(2*E3*c_PI)*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
+			a_A_3_avg(6) = (2*cos(E2*c_PI)*sin((dE2*c_PI)/2.))/(dE2*c_PI);
+			a_A_3_avg(7) = (-2*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
 			a_A_3_avg(8) = 0.0;
 
 			double det_A_3_avg = a_A_3_avg(0)*(a_A_3_avg(4)*a_A_3_avg(8) - a_A_3_avg(7)*a_A_3_avg(5)) - a_A_3_avg(1)*(a_A_3_avg(3)*a_A_3_avg(8) - a_A_3_avg(5)*a_A_3_avg(6)) + a_A_3_avg(2)*(a_A_3_avg(3)*a_A_3_avg(7) - a_A_3_avg(4)*a_A_3_avg(6));
@@ -1162,8 +1162,8 @@ namespace MHD_Mapping {
 	                          const double a_dz)
 	{
 
-		double R0 = inputs.r_in*AU;
-		double R1 = inputs.r_out*AU;
+		double R0 = inputs.r_in*c_AU;
+		double R1 = inputs.r_out*c_AU;
 		double c = inputs.C_rad;
 		double Rt = (R1 - R0)/(exp(c) - 1.0);
 
@@ -1200,7 +1200,7 @@ namespace MHD_Mapping {
 		}
 		
 		double a_r2rdot_avg	=	(exp(c*((-3*dE1)/2. + E1))*(-1 + exp(c*dE1))*Rt*(3*exp(c*dE1)*pow(R0 - Rt,2) + 3*exp(c*((3*dE1)/2. + E1))*(R0 - Rt)*Rt + 3*exp((c*dE1)/2. + c*E1)*(R0 - Rt)*Rt + exp(2*c*E1)*pow(Rt,2) + exp(2*c*(dE1 + E1))*pow(Rt,2) + exp(c*(dE1 + 2*E1))*pow(Rt,2)))/(3.*dE1);
-		double a_detA_avg	=	(4*PI*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+		double a_detA_avg	=	(4*c_PI*sin((dE2*c_PI)/2.)*sin(E2*c_PI))/dE2;
 
 		a_Jacobian_ave(0) = a_r2rdot_avg*a_detA_avg;
 	}
@@ -1654,26 +1654,26 @@ namespace MHD_Mapping {
 			}
 		}
 
-		double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
+		double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
 
-		double r = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta[0]) - 1.0);
-		double theta = PI*eta[1];
-		double phi = 2.0*PI*eta[2];
+		double r = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta[0]) - 1.0);
+		double theta = c_PI*eta[1];
+		double phi = 2.0*c_PI*eta[2];
 
 		if (theta < 0){
 			theta = -theta;
-			if (phi < PI){
-				phi = phi + PI;
+			if (phi < c_PI){
+				phi = phi + c_PI;
 			} else {
-				phi = phi - PI;
+				phi = phi - c_PI;
 			}
 		}
-		if (theta > PI){
-			theta = PI - (theta - PI);
-			if (phi < PI){
-				phi = phi + PI;
+		if (theta > c_PI){
+			theta = c_PI - (theta - c_PI);
+			if (phi < c_PI){
+				phi = phi + c_PI;
 			} else {
-				phi = phi - PI;
+				phi = phi - c_PI;
 			}
 		}
 		a_x_sph(0) = r;  //r
@@ -1702,7 +1702,7 @@ namespace MHD_Mapping {
 	                   		const double a_dy,
 	                   		const double a_dz)
 	{
-		double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
+		double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
 		double eta_here[3];
 		double eta_ahead[3];
 		for (int i = 0; i < DIM; i++)
@@ -1715,13 +1715,13 @@ namespace MHD_Mapping {
 			eta_ahead[i] = a_pt[i]*dxd + dxd;
 		}
 
-		double r_here = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
-		double theta_here = PI*eta_here[1];
-		double phi_here = 2.0*PI*eta_here[2];
+		double r_here = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
+		double theta_here = c_PI*eta_here[1];
+		double phi_here = 2.0*c_PI*eta_here[2];
 
-		double r_ahead = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
-		double theta_ahead = PI*eta_ahead[1];
-		double phi_ahead = 2.0*PI*eta_ahead[2];
+		double r_ahead = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
+		double theta_ahead = c_PI*eta_ahead[1];
+		double phi_ahead = 2.0*c_PI*eta_ahead[2];
 
 		double r = 0.5*(r_here + r_ahead);
 		double theta = 0.5*(theta_here + theta_ahead);
@@ -1729,18 +1729,18 @@ namespace MHD_Mapping {
 
 		if (theta < 0){
 			theta = -theta;
-			if (phi < PI){
-				phi = phi + PI;
+			if (phi < c_PI){
+				phi = phi + c_PI;
 			} else {
-				phi = phi - PI;
+				phi = phi - c_PI;
 			}
 		}
-		if (theta > PI){
-			theta = PI - (theta - PI);
-			if (phi < PI){
-				phi = phi + PI;
+		if (theta > c_PI){
+			theta = c_PI - (theta - c_PI);
+			if (phi < c_PI){
+				phi = phi + c_PI;
 			} else {
-				phi = phi - PI;
+				phi = phi - c_PI;
 			}
 		}
 		a_x_sph(0) = r;  //r
@@ -1768,7 +1768,7 @@ namespace MHD_Mapping {
 	                   		const double a_dy,
 	                   		const double a_dz)
 	{
-		double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
+		double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
 		double eta_here[3];
 		double eta_ahead[3];
 		for (int i = 0; i < DIM; i++)
@@ -1781,13 +1781,13 @@ namespace MHD_Mapping {
 			eta_ahead[i] = a_pt[i]*dxd + dxd;
 		}
 
-		double r_here = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
-		double theta_here = PI*eta_here[1];
-		double phi_here = 2.0*PI*eta_here[2];
+		double r_here = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
+		double theta_here = c_PI*eta_here[1];
+		double phi_here = 2.0*c_PI*eta_here[2];
 
-		double r_ahead = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
-		double theta_ahead = PI*eta_ahead[1];
-		double phi_ahead = 2.0*PI*eta_ahead[2];
+		double r_ahead = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
+		double theta_ahead = c_PI*eta_ahead[1];
+		double phi_ahead = 2.0*c_PI*eta_ahead[2];
 
 		double volume = (1.0/3.0)*(pow(r_ahead,3)-pow(r_here,3))*(cos(theta_here)-cos(theta_ahead))*(phi_ahead-phi_here);
 		
@@ -1814,7 +1814,7 @@ namespace MHD_Mapping {
 	                   		const double a_dy,
 	                   		const double a_dz)
 	{
-		double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
+		double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
 		double eta_here[3];
 		double eta_ahead[3];
 		for (int i = 0; i < DIM; i++)
@@ -1827,13 +1827,13 @@ namespace MHD_Mapping {
 			eta_ahead[i] = a_pt[i]*dxd + dxd;
 		}
 
-		double r_here = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
-		double theta_here = PI*eta_here[1];
-		double phi_here = 2.0*PI*eta_here[2];
+		double r_here = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
+		double theta_here = c_PI*eta_here[1];
+		double phi_here = 2.0*c_PI*eta_here[2];
 
-		double r_ahead = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
-		double theta_ahead = PI*eta_ahead[1];
-		double phi_ahead = 2.0*PI*eta_ahead[2];
+		double r_ahead = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
+		double theta_ahead = c_PI*eta_ahead[1];
+		double phi_ahead = 2.0*c_PI*eta_ahead[2];
 
 		double A_r = pow(r_here,2)*(cos(theta_here)-cos(theta_ahead))*(phi_ahead-phi_here);
 		double A_theta = 0.5*sin(theta_here)*(pow(r_ahead,2) - pow(r_here,2))*(phi_ahead-phi_here);
@@ -1863,7 +1863,7 @@ namespace MHD_Mapping {
 	                   		const double a_dy,
 	                   		const double a_dz)
 	{
-		double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
+		double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
 		double eta_here[3];
 		double eta_ahead[3];
 		for (int i = 0; i < DIM; i++)
@@ -1876,13 +1876,13 @@ namespace MHD_Mapping {
 			eta_ahead[i] = a_pt[i]*dxd + dxd;
 		}
 
-		double r_here = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
-		double theta_here = PI*eta_here[1];
-		double phi_here = 2.0*PI*eta_here[2];
+		double r_here = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_here[0]) - 1.0);
+		double theta_here = c_PI*eta_here[1];
+		double phi_here = 2.0*c_PI*eta_here[2];
 
-		double r_ahead = inputs.r_in*AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
-		double theta_ahead = PI*eta_ahead[1];
-		double phi_ahead = 2.0*PI*eta_ahead[2];
+		double r_ahead = inputs.r_in*c_AU + R_t*(exp(inputs.C_rad*eta_ahead[0]) - 1.0);
+		double theta_ahead = c_PI*eta_ahead[1];
+		double phi_ahead = 2.0*c_PI*eta_ahead[2];
 
 		double dr = r_ahead - r_here;
 		double dtheta = theta_ahead - theta_here;

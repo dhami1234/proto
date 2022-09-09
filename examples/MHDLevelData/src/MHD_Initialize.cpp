@@ -63,7 +63,7 @@ namespace MHD_Initialize {
 			// //////Modifying parameters for 2D current sheet problem/////
 			rho = 1.0;
 			p = 0.1;
-			u = 0.1 * sin(2*PI*y);
+			u = 0.1 * sin(2*c_PI*y);
 			if (x >= 0.0 && x < 0.5) {By = 1.0;}
 			if (x >= 0.5 && x < 1.5) {By = -1.0;}
 			if (x >= 1.5 && x <= 2.0) {By = 1.0;}
@@ -79,20 +79,20 @@ namespace MHD_Initialize {
 		if (inputs.init_condition_type == 3) {
 			//////Modifying parameters for 2D Orszag Tang problem///////
 			// Case 1:
-			rho = gamma*((2.0 * gamma)/8.0/PI)*1.0;
+			rho = gamma*((2.0 * gamma)/8.0/c_PI)*1.0;
 			p = (2.0 * gamma)/8.0/M_PI;
-			u = -sin(2.0*PI*y);
-			v =  sin(2.0*PI*x);
-			Bx = -sin(2.0*PI*y);
-			By =  sin(4.0*PI*x);
+			u = -sin(2.0*c_PI*y);
+			v =  sin(2.0*c_PI*x);
+			Bx = -sin(2.0*c_PI*y);
+			By =  sin(4.0*c_PI*x);
 		}
 
 		if (inputs.init_condition_type == 4) {
 			//////Modifying parameters for Alfven wave problem///////
 			rho = 1.0;
 			p = 1.0;
-			u =  sin(2.0*PI*x);
-			Bx = sin(2.0*PI*x);
+			u =  sin(2.0*c_PI*x);
+			Bx = sin(2.0*c_PI*x);
 		}
 
 		if (inputs.init_condition_type == 5) {
@@ -102,7 +102,7 @@ namespace MHD_Initialize {
 			double delta_rho_0 = 0.14;
 			double rad = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
 			if (rad < 0.5) {
-				rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(PI*rad),6.0);
+				rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(c_PI*rad),6.0);
 			} else {
 				rho = rho_0;
 			}
@@ -117,7 +117,7 @@ namespace MHD_Initialize {
 			double delta_rho_0 = 0.04;
 			double rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y));
 			//if (rad < 0.6 && rad > 0.4){
-			rho = rho_0 + delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0);
+			rho = rho_0 + delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(c_PI*(rad-0.5)),16.0);
 			//} else {
 			//rho = rho_0;
 			//}
@@ -129,7 +129,7 @@ namespace MHD_Initialize {
 			double rho_0 = 1.4;
 			double delta_rho_0 = 0.14;
 			if (x < 0.6 && x > 0.4) {
-				rho = rho_0 + delta_rho_0*exp(-400.0*(x-0.5)*(x-0.5))*pow(cos(PI*(x-0.5)),16.0);
+				rho = rho_0 + delta_rho_0*exp(-400.0*(x-0.5)*(x-0.5))*pow(cos(c_PI*(x-0.5)),16.0);
 			} else {
 				rho = rho_0;
 			}
@@ -144,7 +144,7 @@ namespace MHD_Initialize {
 			double delta_rho_0 = 0.14;
 			double rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y));
 			if (rad < 0.1) {
-				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(PI*(rad)),16.0);
+				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(c_PI*(rad)),16.0);
 			} else {
 				rho = rho_0;
 			}
@@ -156,7 +156,7 @@ namespace MHD_Initialize {
 			double rho0 = gamma;
 			double p0 = 1.;
 			rho = rho0;
-			rho += .01*rho0*sin(2.0*2.0*PI*x);
+			rho += .01*rho0*sin(2.0*2.0*c_PI*x);
 			p = p0*pow(rho/rho0,gamma);
 			double c0 = sqrt(gamma*p0/rho0);
 			double c = sqrt(gamma*p/rho);
@@ -179,7 +179,7 @@ namespace MHD_Initialize {
 			//////Modifying parameters for cylindrical pulse problem in cartesian grid///////
 			double rho_0 = 1.4;
 			double delta_rho_0 = 0.14;
-			rho = rho_0 + delta_rho_0*exp(-400.0*(x-0.5)*(x-0.5))*pow(cos(PI*(x-0.5)),16.0);
+			rho = rho_0 + delta_rho_0*exp(-400.0*(x-0.5)*(x-0.5))*pow(cos(c_PI*(x-0.5)),16.0);
 			p = pow(rho/rho_0,gamma);
 		}
 
@@ -190,7 +190,7 @@ namespace MHD_Initialize {
 			double delta_rho_0 = 0.14;
 			double rad = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5) + (z-0.5)*(z-0.5));
 			if (rad < 0.5) {
-				rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(PI*rad),6.0);
+				rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(c_PI*rad),6.0);
 			} else {
 				rho = rho_0;
 			}
@@ -206,7 +206,7 @@ namespace MHD_Initialize {
 			} else {
 				p = 1.0;
 			}
-			Bx = 100.0/sqrt(4.0*PI);
+			Bx = 100.0/sqrt(4.0*c_PI);
 		}
 
 		if (inputs.init_condition_type == 14) {
@@ -218,7 +218,7 @@ namespace MHD_Initialize {
 			} else {
 				p = 1.0;
 			}
-			Bx = 100.0/sqrt(4.0*PI);
+			Bx = 100.0/sqrt(4.0*c_PI);
 		}
 
 		if (inputs.init_condition_type == 15) {
@@ -228,12 +228,12 @@ namespace MHD_Initialize {
 			double delta_rho_0 = 0.14;
 			double rad = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
 			if (rad < 0.5) {
-				rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(PI*rad),6.0);
+				rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(c_PI*rad),6.0);
 			} else {
 				rho = rho_0;
 			}
 			p = pow(rho/rho_0,gamma);
-			Bx = 10.0/sqrt(4.0*PI);
+			Bx = 10.0/sqrt(4.0*c_PI);
 		}
 
 		if (inputs.init_condition_type == 16) {
@@ -245,7 +245,7 @@ namespace MHD_Initialize {
 			double delta_rho_0 = 0.14;
 			double rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y) + (z-pulsecenter_z)*(z-pulsecenter_z));
 			//if (rad < 0.6 && rad > 0.4){
-			rho = rho_0 + delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0);
+			rho = rho_0 + delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(c_PI*(rad-0.5)),16.0);
 			//} else {
 			//rho = rho_0;
 			//}
@@ -266,7 +266,7 @@ namespace MHD_Initialize {
 			rho = rho_0;
 
 			if (rad < 0.1) {
-				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(PI*(rad)),16.0);
+				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(c_PI*(rad)),16.0);
 			}
 
 			pulsecenter_x = -0.55;
@@ -275,7 +275,7 @@ namespace MHD_Initialize {
 			rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y) + (z-pulsecenter_z)*(z-pulsecenter_z));
 
 			if (rad < 0.1) {
-				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(PI*(rad)),16.0);
+				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(c_PI*(rad)),16.0);
 			}
 
 			pulsecenter_x = 0.55;
@@ -284,7 +284,7 @@ namespace MHD_Initialize {
 			rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y) + (z-pulsecenter_z)*(z-pulsecenter_z));
 
 			if (rad < 0.1) {
-				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(PI*(rad)),16.0);
+				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(c_PI*(rad)),16.0);
 			}
 
 			pulsecenter_x = -0.1;
@@ -293,7 +293,7 @@ namespace MHD_Initialize {
 			rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y) + (z-pulsecenter_z)*(z-pulsecenter_z));
 
 			if (rad < 0.1) {
-				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(PI*(rad)),16.0);
+				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(c_PI*(rad)),16.0);
 			}
 
 			p = pow(rho/rho_0,gamma);
@@ -314,11 +314,11 @@ namespace MHD_Initialize {
 			double theta = atan2(y,x);
 			rho = rho_0;
 			p = rho;
-			//u = delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0)*cos(theta);
-			//v = delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0)*sin(theta);
+			//u = delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(c_PI*(rad-0.5)),16.0)*cos(theta);
+			//v = delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(c_PI*(rad-0.5)),16.0)*sin(theta);
 
 			if (abs(rad-0.5) < 0.1){
-				double ang = 10.0*PI*(rad-0.4) - PI/2.0;
+				double ang = 10.0*c_PI*(rad-0.4) - c_PI/2.0;
 				u = (1.0*delta_rho_0+delta_rho_0*sin(ang))*cos(theta);
 				v = (1.0*delta_rho_0+delta_rho_0*sin(ang))*sin(theta);
 			} else {
@@ -346,8 +346,8 @@ namespace MHD_Initialize {
 			double rad = sqrt(x*x+y*y+z*z);
 			double phi = atan2(y,x);
 			double theta = acos(z/rad);
-			rho = 10.0*pow(inputs.r_in*AU/rad,2.0);
-			p = 1.0*pow(inputs.r_in*AU/rad,2.0*a_gamma);
+			rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
+			p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
 
 			if (inputs.initialize_in_spherical_coords == 1){
 				u = 5.0;
@@ -366,16 +366,16 @@ namespace MHD_Initialize {
 			double rad = sqrt(x*x+y*y+z*z);
 			double phi = atan2(y,x);
 			double theta = acos(z/rad);
-			rho = 10.0*pow(inputs.r_in*AU/rad,2.0);
-			p = 1.0*pow(inputs.r_in*AU/rad,2.0*a_gamma);
+			rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
+			p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
 
 			if (inputs.initialize_in_spherical_coords == 1){
 				u = 5.0;
 				v = 0.0;
 				w = 0.0; 
 				// Bx = 1.0;
-				// Bx = 1.0*cos(theta)*pow(inputs.r_in*AU/rad,2.0);
-				Bx = 1.0*pow(inputs.r_in*AU/rad,1.0);
+				// Bx = 1.0*cos(theta)*pow(inputs.r_in*c_AU/rad,2.0);
+				Bx = 1.0*pow(inputs.r_in*c_AU/rad,1.0);
 			} else {
 				u = 5.0*sin(theta)*cos(phi);
 				v = 5.0*sin(theta)*sin(phi);
@@ -383,7 +383,7 @@ namespace MHD_Initialize {
 			}
 		}
 
-		double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/PI;
+		double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/c_PI;
 
 #if DIM == 2
 		a_U(0) = rho; //rho
@@ -550,14 +550,14 @@ namespace MHD_Initialize {
 		if (inputs.init_condition_type == 21) {
 			//////Modifying parameters for radially out flow in spherical grid///////
 
-			// rho = 10.0*pow(inputs.r_in*AU/rad,2.0);
-			rho = 700*1.67262192e-24*pow(inputs.r_in*AU/rad,2.0); // rho at 21.5 SR is about 700/cm3
+			// rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
+			rho = 700*1.67262192e-24*pow(inputs.r_in*c_AU/rad,2.0); // rho at 21.5 c_SR is about 700/cm3
 			// p = 1.0;
-			p = 1.0e-7*pow(inputs.r_in*AU/rad,2.0*a_gamma); // p near 21.5 SR is about 1e-7 dyne/cm2
-			// p = 1.0*pow(inputs.r_in*AU/rad,2.0*a_gamma);
+			p = 1.0e-7*pow(inputs.r_in*c_AU/rad,2.0*a_gamma); // p near 21.5 c_SR is about 1e-7 dyne/cm2
+			// p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
 
 			if (inputs.initialize_in_spherical_coords == 1){
-				u = 500.0*1e5;  // v at 21.5 SR is about 500 km/s
+				u = 500.0*1e5;  // v at 21.5 c_SR is about 500 km/s
 				v = 0.0;
 				w = 0.0; 
 			} else {
@@ -569,19 +569,19 @@ namespace MHD_Initialize {
 
 		if (inputs.init_condition_type == 22) {
 			//////Modifying parameters for radially out flow in spherical grid and magnetic field///////
-			// rho = 10.0*pow(inputs.r_in*AU/rad,2.0);
-			rho = 700*mp*pow(inputs.r_in*AU/rad,2.0); // rho at 21.5 SR is about 700/cm3
+			// rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
+			rho = 700*c_MP*pow(inputs.r_in*c_AU/rad,2.0); // rho at 21.5 c_SR is about 700/cm3
 			// p = 1.0;
-			p = 1.0e-7*pow(inputs.r_in*AU/rad,2.0*a_gamma); // p near 21.5 SR is about 1e-7 dyne/cm2
-			// p = 1.0*pow(inputs.r_in*AU/rad,2.0*a_gamma);
+			p = 1.0e-7*pow(inputs.r_in*c_AU/rad,2.0*a_gamma); // p near 21.5 c_SR is about 1e-7 dyne/cm2
+			// p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
 
 			if (inputs.initialize_in_spherical_coords == 1){
-				u = 500.0*1e5;  // v at 21.5 SR is about 500 km/s
+				u = 500.0*1e5;  // v at 21.5 c_SR is about 500 km/s
 				v = 0.0;
 				w = 0.0; 
 				// Bx = 1.0;
-				Bx = -0.005*(atan(12*(theta-PI/2))/atan(12*(100-PI/2)))*pow(inputs.r_in*AU/rad,2.0); // Br at 21.5 SR is about 0.005 G
-				// Bx = 1.0*pow(inputs.r_in*AU/rad,2.0);
+				Bx = -0.005*(atan(12*(theta-c_PI/2))/atan(12*(100-c_PI/2)))*pow(inputs.r_in*c_AU/rad,2.0); // Br at 21.5 c_SR is about 0.005 G
+				// Bx = 1.0*pow(inputs.r_in*c_AU/rad,2.0);
 			} else {
 				u = 5.0*sin(theta)*cos(phi);
 				v = 5.0*sin(theta)*sin(phi);
@@ -589,7 +589,7 @@ namespace MHD_Initialize {
 			}
 		}
 
-		double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/PI;
+		double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/c_PI;
 
 #if DIM == 2
 		a_U(0) = rho; //rho

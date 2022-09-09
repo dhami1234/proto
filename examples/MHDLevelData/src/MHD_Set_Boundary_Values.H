@@ -2,7 +2,7 @@
 
 #include "Proto.H"
 #include "MHDOp.H"
-
+#include "MHDLevelDataRK4.H"
 namespace MHD_Set_Boundary_Values {
 
 	void Set_Boundary_Values(BoxData<double,NUMCOMPS>& a_JU,
@@ -42,4 +42,7 @@ namespace MHD_Set_Boundary_Values {
 	                         const int a_lowBCtype,
 	                         const int a_highBCtype);
 
+	void interpolate_h5_BC(MHDLevelDataState& state,
+						const BoxData<double,NUMCOMPS>& BC_data,
+						const double time);
 }

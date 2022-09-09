@@ -307,19 +307,19 @@ namespace MHD_Set_Boundary_Values {
 							Var<double,DIM>& a_x_sph,
 							const double a_gamma)
 	{
-		double r_BC = inputs.r_in*AU; //in cm
+		double r_BC = inputs.r_in*c_AU; //in cm
 		double rad = a_x_sph(0);
-		double rho = a_W(0)*1.67262192e-24*pow(inputs.r_in*AU/rad,2.0);
+		double rho = a_W(0)*1.67262192e-24*pow(inputs.r_in*c_AU/rad,2.0);
 		double u = a_W(1);
 		double v = a_W(2);
 		double w = a_W(3);
-		double p = a_W(4)*1.0e-12*pow(inputs.r_in*AU/rad,2.0*a_gamma); // From picodyne to dyne 
-		double Bx = a_W(5)*1.0e-6*pow(inputs.r_in*AU/rad,2.0); // MicroGauss to Gauss
-		double By = a_W(6)*1.0e-6*pow(inputs.r_in*AU/rad,1.0);
-		double Bz = a_W(7)*1.0e-6*pow(inputs.r_in*AU/rad,1.0);
+		double p = a_W(4)*1.0e-12*pow(inputs.r_in*c_AU/rad,2.0*a_gamma); // From picodyne to dyne 
+		double Bx = a_W(5)*1.0e-6*pow(inputs.r_in*c_AU/rad,2.0); // MicroGauss to Gauss
+		double By = a_W(6)*1.0e-6*pow(inputs.r_in*c_AU/rad,1.0);
+		double Bz = a_W(7)*1.0e-6*pow(inputs.r_in*c_AU/rad,1.0);
 
 
-		double e = p/(a_gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/PI;
+		double e = p/(a_gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/c_PI;
 
 		a_U_scaled(0) = rho; //rho
 		a_U_scaled(1) = rho*u; //Momentum-x
@@ -445,6 +445,30 @@ namespace MHD_Set_Boundary_Values {
 		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_U, a_dx, a_dy, a_dz, "STATE");
 
 
+	}
+
+	void interpolate_h5_BC(MHDLevelDataState& state,
+						const BoxData<double,NUMCOMPS>& BC_data,
+						const double time)
+	{
+		BoxData<double, NUMCOMPS> BC_data_rotated;
+		double carr_rot_time = 25.38*24*60*60; // Seconds
+		// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
+		// Carrington rotation time (27.2753 days) is from Earth's prespective.
+		double angle_to_rotate = fmod(360*time/carr_rot_time,360);
+		int cells_to_rotate = angle_to_rotate/(360/inputs.domainSizez);
+		double needed_fraction = angle_to_rotate/(360/inputs.domainSizez) - cells_to_rotate;
+		cells_to_rotate = cells_to_rotate % inputs.domainSizez;
+		cells_to_rotate = inputs.domainSizez - cells_to_rotate;
+		static Stencil<double> m_right_shift;
+		m_right_shift = (1.0-needed_fraction)*Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(2));
+		Box dbx0 = BC_data.box();
+		for (auto dit : state.m_U)
+		{	
+			BC_data.copyTo(state.m_BC[ dit],dbx0,Point::Basis(2)*(-cells_to_rotate));
+			BC_data_rotated = m_right_shift(state.m_BC[ dit]);
+			BC_data_rotated.copyTo(state.m_BC[ dit]);
+		}
 	}
 
 }

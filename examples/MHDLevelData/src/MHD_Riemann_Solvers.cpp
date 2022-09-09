@@ -762,14 +762,14 @@ namespace MHD_Riemann_Solvers {
 		if (p < 0.0) p = 0.0;
 		ce = sqrt(gamma*p/rho);
 		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-		af = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho);
-		// af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )+( abs(Bdir)*ce/sqrt(PI*rho) ))+sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )-( abs(Bdir)*ce/sqrt(PI*rho) )));
+		af = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
+		// af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )+( abs(Bdir)*ce/sqrt(c_PI*rho) ))+sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )-( abs(Bdir)*ce/sqrt(c_PI*rho) )));
 		// a_lambda(0) = af + abs(udir);
 		// a_lambda(0) = ce;
 		// a_lambda(0) = 0.;
 		a_lambda(0) = af;
 		// u_mag = sqrt(u*u+v*v+w*w);
-		// af = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho);
+		// af = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
 		// a_lambda(0) = af + u_mag;
 
 	}
@@ -819,7 +819,7 @@ namespace MHD_Riemann_Solvers {
 		if (p < 0.0) p = 0.0;
 		ce = sqrt(gamma*p/rho);
 		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-		af = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho);
+		af = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
 		a_fastMSspeed(0) = af;
 
 	}
@@ -845,12 +845,12 @@ namespace MHD_Riemann_Solvers {
 		v2 = a_W(1)*a_W(1) + a_W(2)*a_W(2);
 		B2 = a_W(4)*a_W(4) + a_W(5)*a_W(5);
 		vB = a_W(1)*a_W(4) + a_W(2)*a_W(5);
-		p0 = a_W(3) + B2/8.0/PI;
-		e  = a_W(3)/(gamma-1.0) + rho*v2/2.0 + B2/8.0/PI;
+		p0 = a_W(3) + B2/8.0/c_PI;
+		e  = a_W(3)/(gamma-1.0) + rho*v2/2.0 + B2/8.0/c_PI;
 		a_F(0) = rho*a_W(1+a_d);
-		a_F(1) = rho*a_W(1)*a_W(1+a_d) + mult1*p0 - a_W(4)*a_W(4+a_d)/4.0/PI;
-		a_F(2) = rho*a_W(2)*a_W(1+a_d) + mult2*p0 - a_W(5)*a_W(4+a_d)/4.0/PI;
-		a_F(3) = (e+p0)*a_W(1+a_d) - a_W(4+a_d)*vB/4.0/PI;
+		a_F(1) = rho*a_W(1)*a_W(1+a_d) + mult1*p0 - a_W(4)*a_W(4+a_d)/4.0/c_PI;
+		a_F(2) = rho*a_W(2)*a_W(1+a_d) + mult2*p0 - a_W(5)*a_W(4+a_d)/4.0/c_PI;
+		a_F(3) = (e+p0)*a_W(1+a_d) - a_W(4+a_d)*vB/4.0/c_PI;
 		a_F(4) = mult2*(a_W(1+a_d)*a_W(4) - a_W(1)*a_W(4+a_d));
 		a_F(5) = mult1*(a_W(1+a_d)*a_W(5) - a_W(2)*a_W(4+a_d));
 #endif
@@ -859,13 +859,13 @@ namespace MHD_Riemann_Solvers {
 		v2 = a_W(1)*a_W(1) + a_W(2)*a_W(2) + a_W(3)*a_W(3);
 		B2 = a_W(5)*a_W(5) + a_W(6)*a_W(6) + a_W(7)*a_W(7);
 		vB = a_W(1)*a_W(5) + a_W(2)*a_W(6) + a_W(3)*a_W(7);
-		p0 = a_W(4) + B2/8.0/PI;
-		e  = a_W(4)/(gamma-1.0) + rho*v2/2.0 + B2/8.0/PI;
+		p0 = a_W(4) + B2/8.0/c_PI;
+		e  = a_W(4)/(gamma-1.0) + rho*v2/2.0 + B2/8.0/c_PI;
 		a_F(0) = rho*a_W(1+a_d);
-		a_F(1) = rho*a_W(1)*a_W(1+a_d) + mult1*p0 - a_W(5)*a_W(5+a_d)/4.0/PI;
-		a_F(2) = rho*a_W(2)*a_W(1+a_d) + mult2*p0 - a_W(6)*a_W(5+a_d)/4.0/PI;
-		a_F(3) = rho*a_W(3)*a_W(1+a_d) + mult3*p0 - a_W(7)*a_W(5+a_d)/4.0/PI;
-		a_F(4) = (e+p0)*a_W(1+a_d) - a_W(5+a_d)*vB/4.0/PI;
+		a_F(1) = rho*a_W(1)*a_W(1+a_d) + mult1*p0 - a_W(5)*a_W(5+a_d)/4.0/c_PI;
+		a_F(2) = rho*a_W(2)*a_W(1+a_d) + mult2*p0 - a_W(6)*a_W(5+a_d)/4.0/c_PI;
+		a_F(3) = rho*a_W(3)*a_W(1+a_d) + mult3*p0 - a_W(7)*a_W(5+a_d)/4.0/c_PI;
+		a_F(4) = (e+p0)*a_W(1+a_d) - a_W(5+a_d)*vB/4.0/c_PI;
 		a_F(5) = (mult2+mult3)*(a_W(1+a_d)*a_W(5) - a_W(1)*a_W(5+a_d));
 		a_F(6) = (mult1+mult3)*(a_W(1+a_d)*a_W(6) - a_W(2)*a_W(5+a_d));
 		a_F(7) = (mult1+mult2)*(a_W(1+a_d)*a_W(7) - a_W(3)*a_W(5+a_d));
@@ -905,8 +905,8 @@ namespace MHD_Riemann_Solvers {
 		B2_hi   = Bx_hi*Bx_hi + By_hi*By_hi;
 		v2_lo   = a_W_lo(1)*a_W_lo(1) + a_W_lo(2)*a_W_lo(2);
 		v2_hi   = a_W_hi(1)*a_W_hi(1) + a_W_hi(2)*a_W_hi(2);
-		e_lo    = p_lo/(gamma-1.0) + rho_lo*v2_lo/2.0 + B2_lo/8.0/PI;
-		e_hi    = p_hi/(gamma-1.0) + rho_hi*v2_hi/2.0 + B2_hi/8.0/PI;
+		e_lo    = p_lo/(gamma-1.0) + rho_lo*v2_lo/2.0 + B2_lo/8.0/c_PI;
+		e_hi    = p_hi/(gamma-1.0) + rho_hi*v2_hi/2.0 + B2_hi/8.0/c_PI;
 
 		a_out(0) = 0.5*(a_F_hi(0) + a_F_lo(0) - (a_lambda(0))*(rho_hi-rho_lo));
 		a_out(1) = 0.5*(a_F_hi(1) + a_F_lo(1) - (a_lambda(0))*(rhou_hi-rhou_lo));
@@ -940,8 +940,8 @@ namespace MHD_Riemann_Solvers {
 		B2_hi   = Bx_hi*Bx_hi + By_hi*By_hi + Bz_hi*Bz_hi;
 		v2_lo   = a_W_lo(1)*a_W_lo(1) + a_W_lo(2)*a_W_lo(2) + a_W_lo(3)*a_W_lo(3);
 		v2_hi   = a_W_hi(1)*a_W_hi(1) + a_W_hi(2)*a_W_hi(2) + a_W_hi(3)*a_W_hi(3);
-		e_lo    = p_lo/(gamma-1.0) + rho_lo*v2_lo/2.0 + B2_lo/8.0/PI;
-		e_hi    = p_hi/(gamma-1.0) + rho_hi*v2_hi/2.0 + B2_hi/8.0/PI;
+		e_lo    = p_lo/(gamma-1.0) + rho_lo*v2_lo/2.0 + B2_lo/8.0/c_PI;
+		e_hi    = p_hi/(gamma-1.0) + rho_hi*v2_hi/2.0 + B2_hi/8.0/c_PI;
 		a_out(0) = 0.5*(a_F_hi(0) + a_F_lo(0) - abs(a_lambda(0))*(rho_hi-rho_lo));
 		a_out(1) = 0.5*(a_F_hi(1) + a_F_lo(1) - abs(a_lambda(0))*(rhou_hi-rhou_lo));
 		a_out(2) = 0.5*(a_F_hi(2) + a_F_lo(2) - abs(a_lambda(0))*(rhov_hi-rhov_lo));
@@ -997,8 +997,8 @@ namespace MHD_Riemann_Solvers {
 		v2 = a_W_actual(1)*a_W_actual(1) + a_W_actual(2)*a_W_actual(2) + a_W_actual(3)*a_W_actual(3);
 		//B2 = a_W(5)*a_W(5) + a_W(6)*a_W(6) + a_W(7)*a_W(7);
 		//vB = a_W(1)*a_W(5) + a_W(2)*a_W(6) + a_W(3)*a_W(7);
-		p0 = a_W(4);// + B2/8.0/PI;
-		e  = a_W(4)/(gamma-1.0) + rho*v2/2.0;// + B2/8.0/PI;
+		p0 = a_W(4);// + B2/8.0/c_PI;
+		e  = a_W(4)/(gamma-1.0) + rho*v2/2.0;// + B2/8.0/c_PI;
 		a_F(0) = rho*a_W(1+a_d);
 		a_F(1) = rho*a_W(1)*a_W(1+a_d);// + mult1*p0;
 		a_F(2) = rho*a_W(2)*a_W(1+a_d);// + mult2*p0;
@@ -1034,8 +1034,8 @@ namespace MHD_Riemann_Solvers {
 		v2 = a_W_actual(1)*a_W_actual(1) + a_W_actual(2)*a_W_actual(2) + a_W_actual(3)*a_W_actual(3);
 		B2 = a_W_actual(5)*a_W_actual(5) + a_W_actual(6)*a_W_actual(6) + a_W_actual(7)*a_W_actual(7);
 		vB = a_W_actual(1)*a_W_actual(5) + a_W_actual(2)*a_W_actual(6) + a_W_actual(3)*a_W_actual(7);
-		p0 = a_W(4) + B2/8.0/PI;
-		e  = a_W(4)/(gamma-1.0) + rho*v2/2.0 + B2/8.0/PI;
+		p0 = a_W(4) + B2/8.0/c_PI;
+		e  = a_W(4)/(gamma-1.0) + rho*v2/2.0 + B2/8.0/c_PI;
 
 		if (a_d == 0) {  //r
 			a_F(0) = a_r2detA_1_avg(0)*rho*a_W(1);
@@ -1046,12 +1046,12 @@ namespace MHD_Riemann_Solvers {
 			a_F(1) += a_r2detAn_1_avg(0)*p0;
 			a_F(2) += a_r2detAn_1_avg(1)*p0;
 			a_F(3) += a_r2detAn_1_avg(2)*p0;
-			a_F(1) -= a_r2detAA_1_avg(0)*(1/4.0/PI)*a_W(5)*a_W(5) + a_r2detAA_1_avg(1)*(1/4.0/PI)*a_W(5)*a_W(6) + a_r2detAA_1_avg(2)*(1/4.0/PI)*a_W(5)*a_W(7);
-			a_F(2) -= a_r2detAA_1_avg(3)*(1/4.0/PI)*a_W(5)*a_W(5) + a_r2detAA_1_avg(4)*(1/4.0/PI)*a_W(5)*a_W(6) + a_r2detAA_1_avg(5)*(1/4.0/PI)*a_W(5)*a_W(7);
-			a_F(3) -= a_r2detAA_1_avg(6)*(1/4.0/PI)*a_W(5)*a_W(5) + a_r2detAA_1_avg(7)*(1/4.0/PI)*a_W(5)*a_W(6) + a_r2detAA_1_avg(8)*(1/4.0/PI)*a_W(5)*a_W(7);
+			a_F(1) -= a_r2detAA_1_avg(0)*(1/4.0/c_PI)*a_W(5)*a_W(5) + a_r2detAA_1_avg(1)*(1/4.0/c_PI)*a_W(5)*a_W(6) + a_r2detAA_1_avg(2)*(1/4.0/c_PI)*a_W(5)*a_W(7);
+			a_F(2) -= a_r2detAA_1_avg(3)*(1/4.0/c_PI)*a_W(5)*a_W(5) + a_r2detAA_1_avg(4)*(1/4.0/c_PI)*a_W(5)*a_W(6) + a_r2detAA_1_avg(5)*(1/4.0/c_PI)*a_W(5)*a_W(7);
+			a_F(3) -= a_r2detAA_1_avg(6)*(1/4.0/c_PI)*a_W(5)*a_W(5) + a_r2detAA_1_avg(7)*(1/4.0/c_PI)*a_W(5)*a_W(6) + a_r2detAA_1_avg(8)*(1/4.0/c_PI)*a_W(5)*a_W(7);
 
 			a_F(4) = a_r2detA_1_avg(0)*(e+p0)*a_W(1);
-			a_F(4) -= a_r2detA_1_avg(0)*(1/4.0/PI)*(vB)*a_W(5);
+			a_F(4) -= a_r2detA_1_avg(0)*(1/4.0/c_PI)*(vB)*a_W(5);
 
 			a_F(5) = a_r2detAA_1_avg(0)*a_W(5)*a_W(1) + a_r2detAA_1_avg(1)*a_W(5)*a_W(2) + a_r2detAA_1_avg(2)*a_W(5)*a_W(3);
 			a_F(6) = a_r2detAA_1_avg(3)*a_W(5)*a_W(1) + a_r2detAA_1_avg(4)*a_W(5)*a_W(2) + a_r2detAA_1_avg(5)*a_W(5)*a_W(3);
@@ -1070,12 +1070,12 @@ namespace MHD_Riemann_Solvers {
 			a_F(1) += a_rrdotd3ncn_2_avg(0)*p0;
 			a_F(2) += a_rrdotd3ncn_2_avg(1)*p0;
 			a_F(3) += a_rrdotd3ncn_2_avg(2)*p0;
-			a_F(1) -= a_rrdotdetAA_2_avg(0)*(1/4.0/PI)*a_W(6)*a_W(5) + a_rrdotdetAA_2_avg(1)*(1/4.0/PI)*a_W(6)*a_W(6) + a_rrdotdetAA_2_avg(2)*(1/4.0/PI)*a_W(6)*a_W(7);
-			a_F(2) -= a_rrdotdetAA_2_avg(3)*(1/4.0/PI)*a_W(6)*a_W(5) + a_rrdotdetAA_2_avg(4)*(1/4.0/PI)*a_W(6)*a_W(6) + a_rrdotdetAA_2_avg(5)*(1/4.0/PI)*a_W(6)*a_W(7);
-			a_F(3) -= a_rrdotdetAA_2_avg(6)*(1/4.0/PI)*a_W(6)*a_W(5) + a_rrdotdetAA_2_avg(7)*(1/4.0/PI)*a_W(6)*a_W(6) + a_rrdotdetAA_2_avg(8)*(1/4.0/PI)*a_W(6)*a_W(7);
+			a_F(1) -= a_rrdotdetAA_2_avg(0)*(1/4.0/c_PI)*a_W(6)*a_W(5) + a_rrdotdetAA_2_avg(1)*(1/4.0/c_PI)*a_W(6)*a_W(6) + a_rrdotdetAA_2_avg(2)*(1/4.0/c_PI)*a_W(6)*a_W(7);
+			a_F(2) -= a_rrdotdetAA_2_avg(3)*(1/4.0/c_PI)*a_W(6)*a_W(5) + a_rrdotdetAA_2_avg(4)*(1/4.0/c_PI)*a_W(6)*a_W(6) + a_rrdotdetAA_2_avg(5)*(1/4.0/c_PI)*a_W(6)*a_W(7);
+			a_F(3) -= a_rrdotdetAA_2_avg(6)*(1/4.0/c_PI)*a_W(6)*a_W(5) + a_rrdotdetAA_2_avg(7)*(1/4.0/c_PI)*a_W(6)*a_W(6) + a_rrdotdetAA_2_avg(8)*(1/4.0/c_PI)*a_W(6)*a_W(7);
 
 			a_F(4) = a_rrdotdetA_2_avg(0)*(e+p0)*a_W(2);
-			a_F(4) -= a_rrdotdetA_2_avg(0)*(1/4.0/PI)*(vB)*a_W(6);
+			a_F(4) -= a_rrdotdetA_2_avg(0)*(1/4.0/c_PI)*(vB)*a_W(6);
 
 			a_F(5) = a_rrdotdetAA_2_avg(0)*a_W(6)*a_W(1) + a_rrdotdetAA_2_avg(1)*a_W(6)*a_W(2) + a_rrdotdetAA_2_avg(2)*a_W(6)*a_W(3);
 			a_F(6) = a_rrdotdetAA_2_avg(3)*a_W(6)*a_W(1) + a_rrdotdetAA_2_avg(4)*a_W(6)*a_W(2) + a_rrdotdetAA_2_avg(5)*a_W(6)*a_W(3);
@@ -1094,12 +1094,12 @@ namespace MHD_Riemann_Solvers {
 			a_F(1) += a_rrdotncd2n_3_avg(0)*p0;
 			a_F(2) += a_rrdotncd2n_3_avg(1)*p0;
 			a_F(3) += a_rrdotncd2n_3_avg(2)*p0;
-			a_F(1) -= a_rrdotdetAA_3_avg(0)*(1/4.0/PI)*a_W(7)*a_W(5) + a_rrdotdetAA_3_avg(1)*(1/4.0/PI)*a_W(7)*a_W(6) + a_rrdotdetAA_3_avg(2)*(1/4.0/PI)*a_W(7)*a_W(7);
-			a_F(2) -= a_rrdotdetAA_3_avg(3)*(1/4.0/PI)*a_W(7)*a_W(5) + a_rrdotdetAA_3_avg(4)*(1/4.0/PI)*a_W(7)*a_W(6) + a_rrdotdetAA_3_avg(5)*(1/4.0/PI)*a_W(7)*a_W(7);
-			a_F(3) -= a_rrdotdetAA_3_avg(6)*(1/4.0/PI)*a_W(7)*a_W(5) + a_rrdotdetAA_3_avg(7)*(1/4.0/PI)*a_W(7)*a_W(6) + a_rrdotdetAA_3_avg(8)*(1/4.0/PI)*a_W(7)*a_W(7);
+			a_F(1) -= a_rrdotdetAA_3_avg(0)*(1/4.0/c_PI)*a_W(7)*a_W(5) + a_rrdotdetAA_3_avg(1)*(1/4.0/c_PI)*a_W(7)*a_W(6) + a_rrdotdetAA_3_avg(2)*(1/4.0/c_PI)*a_W(7)*a_W(7);
+			a_F(2) -= a_rrdotdetAA_3_avg(3)*(1/4.0/c_PI)*a_W(7)*a_W(5) + a_rrdotdetAA_3_avg(4)*(1/4.0/c_PI)*a_W(7)*a_W(6) + a_rrdotdetAA_3_avg(5)*(1/4.0/c_PI)*a_W(7)*a_W(7);
+			a_F(3) -= a_rrdotdetAA_3_avg(6)*(1/4.0/c_PI)*a_W(7)*a_W(5) + a_rrdotdetAA_3_avg(7)*(1/4.0/c_PI)*a_W(7)*a_W(6) + a_rrdotdetAA_3_avg(8)*(1/4.0/c_PI)*a_W(7)*a_W(7);
 
 			a_F(4) = a_rrdotdetA_3_avg(0)*(e+p0)*a_W(3);
-			a_F(4) -= a_rrdotdetA_3_avg(0)*(1/4.0/PI)*(vB)*a_W(7);
+			a_F(4) -= a_rrdotdetA_3_avg(0)*(1/4.0/c_PI)*(vB)*a_W(7);
 
 			a_F(5) = a_rrdotdetAA_3_avg(0)*a_W(7)*a_W(1) + a_rrdotdetAA_3_avg(1)*a_W(7)*a_W(2) + a_rrdotdetAA_3_avg(2)*a_W(7)*a_W(3);
 			a_F(6) = a_rrdotdetAA_3_avg(3)*a_W(7)*a_W(1) + a_rrdotdetAA_3_avg(4)*a_W(7)*a_W(2) + a_rrdotdetAA_3_avg(5)*a_W(7)*a_W(3);

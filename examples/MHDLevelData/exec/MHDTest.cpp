@@ -26,6 +26,7 @@
 #include "MHDReader.H"
 #include "RK4.H"
 #include "PolarExchangeCopier.H"
+#include "MHD_Set_Boundary_Values.H"
 
 using namespace std;
 using namespace Proto;
@@ -39,7 +40,7 @@ int main(int argc, char* argv[])
 #endif
 	//have to do this to get a time table
 	PR_TIMER_SETFILE("proto.time.table");
-	//PR_TIME("main");
+	PR_TIME("main");
 	int pid = procID();
 	//Reading inputs file
 	inputs.parsenow(argc,argv);
@@ -120,16 +121,12 @@ int main(int argc, char* argv[])
 		MHDReader reader;
 		HDF5Handler h5;
 
-		// Read data from "POT3D360x180.hdf5"
+		// Read data from h5 BC
 		BoxData<double, NUMCOMPS> BC_data;
-		BoxData<double, NUMCOMPS> BC_data_rotated;
 		std::vector<double> dtheta;
 		reader.readData(BC_data, inputs.BC_file);
 		reader.readGeom(dtheta, inputs.BC_file);
 		
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(BC_data, dx, dy, dz, "STATE");
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(BC_data_rotated, dx, dy, dz, "STATE_rotated");
-
 		if (inputs.restartStep == 0){
 			if (inputs.grid_type_global == 2 && (inputs.initialize_in_spherical_coords == 1)){
 				for (auto dit : state.m_U){	
@@ -152,29 +149,6 @@ int main(int argc, char* argv[])
 			dt = h5.dt();
 		}
 
-		LevelBoxData<double,DIM+NUMCOMPS> OUT[3];
-		if (inputs.grid_type_global == 2) {
-			#if DIM == 2
-			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey)),{{0,1}});
-			#endif
-			#if DIM == 3
-			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey, inputs.domainSizez)), {{0,0,1}});
-			#endif
-		} else {
-			#if DIM == 2
-			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey)),Point::Zeros());
-			#endif
-			#if DIM == 3
-			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey,  inputs.domainSizez)), Point::Zeros());
-			#endif
-		}
-		LevelBoxData<double,NUMCOMPS> new_state(state.m_dbl,Point::Ones(NGHOST));
-		LevelBoxData<double,NUMCOMPS> new_state2(state.m_dbl,Point::Zeros());
-		LevelBoxData<double,NUMCOMPS> new_state3(state.m_dbl,Point::Zeros());
-		LevelBoxData<double,DIM> phys_coords(state.m_dbl,Point::Ones(NGHOST));
-		LevelBoxData<double,NUMCOMPS+DIM> out_data(state.m_dbl,Point::Ones(NGHOST));
-		LevelBoxData<double,NUMCOMPS> out_data2(state.m_dbl,Point::Zeros());
-		LevelBoxData<double,DIM> x_sph(state.m_dbl,Point::Zeros());
 		int start_iter = 0;
 		if (inputs.restartStep != 0) {start_iter = inputs.restartStep;}
 		if(pid==0) cout << "starting time loop from step " << start_iter << " , maxStep = " << inputs.maxStep << endl;
@@ -206,26 +180,10 @@ int main(int argc, char* argv[])
 				EulerStep<MHDLevelDataState, MHDLevelDatadivBOp, MHDLevelDataDX> divBstep;
 				EulerStep<MHDLevelDataState, MHDLevelDataViscosityOp, MHDLevelDataDX> viscositystep;
 
-				double carr_rot_time = 25.38*24*60*60; // Seconds
-				// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
-				// Carrington rotation time (27.2753 days) is from Earth's prespective.
-				double angle_to_rotate = fmod(360*time/carr_rot_time,360);
-				int cells_to_rotate = angle_to_rotate/(360/inputs.domainSizez);
-				double needed_fraction = angle_to_rotate/(360/inputs.domainSizez) - cells_to_rotate;
-				cells_to_rotate = cells_to_rotate % inputs.domainSizez;
-				cells_to_rotate = inputs.domainSizez - cells_to_rotate;
-				static Stencil<double> m_right_shift;
-				m_right_shift = (1.0-needed_fraction)*Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(2));
-				Box dbx0 = BC_data.box();
-				for (auto dit : state.m_U)
-				{	
-					BC_data.copyTo(state.m_BC[ dit],dbx0,Point::Basis(2)*(-cells_to_rotate));
-					BC_data_rotated = m_right_shift(state.m_BC[ dit]);
-					BC_data_rotated.copyTo(state.m_BC[ dit]);
-				}
-
+				MHD_Set_Boundary_Values::interpolate_h5_BC(state, BC_data, time);
 
 				if (inputs.convTestType == 1 || inputs.timeIntegratorType == 1) {
+					PR_TIME("eulerstep");
 					eulerstep.advance(time,dt,state);
 				} else {
 					if (inputs.timeIntegratorType == 4){
@@ -239,6 +197,7 @@ int main(int argc, char* argv[])
 
 				if (inputs.takedivBstep == 1) {
 					// Take step for divB term
+					PR_TIME("divBstep");
 					divBstep.advance(time,dt,state);
 				}
 				time += dt;
@@ -258,61 +217,13 @@ int main(int argc, char* argv[])
 				}
 
 				if(((inputs.outputInterval > 0) && ((k)%inputs.outputInterval == 0)) || time == inputs.tstop || ((inputs.outputInterval > 0) && (k == 0 || k == inputs.restartStep)))
-				{
-					for (auto dit : new_state){		
-						if (inputs.grid_type_global == 2){
-							if (inputs.Spherical_2nd_order == 0){
-								MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state[ dit], state.m_U[ dit], (state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit], (state.m_A_row_mag_avg)[ dit], inputs.gamma, true);
-								// MHD_Mapping::JU_to_W_bar_calc(new_state[ dit],state.m_U[ dit],(state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit],dx,dy,dz,inputs.gamma);
-							}
-							if (inputs.Spherical_2nd_order == 1){
-								MHDOp::consToPrimcalc(new_state3[ dit],state.m_U[ dit],inputs.gamma);
-								MHD_Mapping::get_sph_coords_cc(x_sph[ dit],x_sph[ dit].box(),dx, dy, dz);
-								MHD_Mapping::Cartesian_to_Spherical(new_state[ dit],new_state3[ dit],x_sph[ dit]);
-							}
-						} else {
-							//W_bar itself is not 4th order W. But it is calculated from 4th order accurate U for output.
-							//JU_to_W_calc is not suitable here as m_U doesn't have ghost cells, and deconvolve doesn't work at boundaries.
-						    MHD_Mapping::JU_to_W_bar_calc(new_state[ dit],state.m_U[ dit],(state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit],dx,dy,dz,inputs.gamma);
-						}
-						MHD_Mapping::phys_coords_calc(phys_coords[ dit],state.m_U[ dit].box(),dx,dy,dz);
-						MHD_Mapping::out_data_calc(out_data[ dit],phys_coords[ dit],new_state[ dit]);
-						
-						// MHD_Mapping::out_data_calc(out_data[ dit],phys_coords[ dit],state.m_U[ dit]);
-					}
-					//Solution on a single patch, No need when using hdf5. Needed for convergence tests.
-					if (inputs.convTestType != 0) (out_data).copyTo(OUT[lev]);
-					// (state.m_U).copyTo(OUT[lev]);
-					if (inputs.convTestType != 0) OUT[lev].exchange();
-
-					// std::string filename_Data="Data_"+std::to_string(k);
-					std::string filename_Data=inputs.Data_file_Prefix+std::to_string(k);
-					// MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz,k,time,filename_Data);
+				{	
+					MHD_Output_Writer::Write_data(state, k, time, dt, dx, dy, dz);			
 					
-					h5.setTime(time);
-					h5.setTimestep(dt);
-					#if DIM == 2
-					h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_Data);
-					#endif
-					#if DIM == 3
-					h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data, filename_Data);
-					#endif
-					if(pid==0) cout << "Written data file after step "<< k << endl;		
 				}
 				if((((inputs.CheckpointInterval > 0) && ((k)%inputs.CheckpointInterval == 0)) || time == inputs.tstop || ((inputs.CheckpointInterval > 0) && (k == 0))) && (k!=start_iter || k==0))
 				{
-					// std::string filename_Checkpoint="Checkpoint_"+std::to_string(k);
-					std::string filename_Checkpoint=inputs.Checkpoint_file_Prefix+std::to_string(k);
-					(state.m_U).copyTo(out_data2);
-					h5.setTime(time);
-					h5.setTimestep(dt);
-					#if DIM == 2
-					h5.writeLevel({"density","Vx","Vy", "p","Bx","By"}, 1, out_data2, filename_Checkpoint);
-					#endif
-					#if DIM == 3
-					h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data2, filename_Checkpoint);
-					#endif
-					if(pid==0) cout << "Written checkpoint file after step "<< k << endl;	
+					MHD_Output_Writer::Write_checkpoint(state, k, time, dt, dx, dy, dz);	
 				}
 			}
 			auto end = chrono::steady_clock::now();

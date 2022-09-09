@@ -203,16 +203,16 @@ namespace MHD_Probe {
         double r_now = interpolate(time_traj_file, r_traj_file, physical_time, false);
         double latitude_now = interpolate(time_traj_file, lat_traj_file, physical_time, false);
         double longitude_now = interpolate(time_traj_file, lon_traj_file, physical_time, false);
-        r_now *= AU;
+        r_now *= c_AU;
         latitude_now = (90.0-latitude_now); //To co-latitude
         longitude_now = longitude_now + 181.02; // HGI to Carrington
         if (longitude_now >= 360.0) longitude_now -= 360;
         // longitude_now = longitude_now - 1.792951949248379e+02; // HGI to Carrington
         if (longitude_now < 0.0) longitude_now += 360;
 
-        double x_n = sin(latitude_now*PI/180)*cos(longitude_now*PI/180);
-        double y_n = sin(latitude_now*PI/180)*sin(longitude_now*PI/180);
-        double z_n = cos(latitude_now*PI/180);
+        double x_n = sin(latitude_now*c_PI/180)*cos(longitude_now*c_PI/180);
+        double y_n = sin(latitude_now*c_PI/180)*sin(longitude_now*c_PI/180);
+        double z_n = cos(latitude_now*c_PI/180);
 
         double H3_to_RTN_00 = x_n;
         double H3_to_RTN_01 = y_n;
@@ -225,10 +225,10 @@ namespace MHD_Probe {
         double H3_to_RTN_22 = x_n*x_n + y_n*y_n;
 
 
-        double R_t = (inputs.r_out*AU - inputs.r_in*AU)/(exp(inputs.C_rad) - 1.0);
-        double eta0 = (1.0/inputs.C_rad)*log(1.0+(r_now - inputs.r_in*AU)/R_t);
-        double eta1 = (latitude_now*PI/180.0)/PI;
-        double eta2 = (longitude_now*PI/180.0)/2.0/PI;
+        double R_t = (inputs.r_out*c_AU - inputs.r_in*c_AU)/(exp(inputs.C_rad) - 1.0);
+        double eta0 = (1.0/inputs.C_rad)*log(1.0+(r_now - inputs.r_in*c_AU)/R_t);
+        double eta1 = (latitude_now*c_PI/180.0)/c_PI;
+        double eta2 = (longitude_now*c_PI/180.0)/2.0/c_PI;
 
         double pt0 = eta0/a_dx;
         double pt1 = eta1/a_dy;
@@ -269,8 +269,8 @@ namespace MHD_Probe {
             for(int i=0; i<NUMCOMPS; i++){
                 probed_values[i] = a_outdata(index_cc, i);
                 if (dbx0.contains(index_n0)) probed_values[i] += (a_outdata(index_n0, i)-a_outdata(index_cc, i))*(r_now          - x_sph_cc(index_cc,0))/(x_sph_cc(index_n0,0) - x_sph_cc(index_cc,0));
-                if (dbx0.contains(index_n1)) probed_values[i] += (a_outdata(index_n1, i)-a_outdata(index_cc, i))*(latitude_now*PI/180   - x_sph_cc(index_cc,1))/(x_sph_cc(index_n1,1) - x_sph_cc(index_cc,1));
-                if (dbx0.contains(index_n2)) probed_values[i] += (a_outdata(index_n2, i)-a_outdata(index_cc, i))*(longitude_now*PI/180  - x_sph_cc(index_cc,2))/(x_sph_cc(index_n2,2) - x_sph_cc(index_cc,2));
+                if (dbx0.contains(index_n1)) probed_values[i] += (a_outdata(index_n1, i)-a_outdata(index_cc, i))*(latitude_now*c_PI/180   - x_sph_cc(index_cc,1))/(x_sph_cc(index_n1,1) - x_sph_cc(index_cc,1));
+                if (dbx0.contains(index_n2)) probed_values[i] += (a_outdata(index_n2, i)-a_outdata(index_cc, i))*(longitude_now*c_PI/180  - x_sph_cc(index_cc,2))/(x_sph_cc(index_n2,2) - x_sph_cc(index_cc,2));
             }
 
             
@@ -290,9 +290,9 @@ namespace MHD_Probe {
                 B2 += B*B;
             }
 
-            probed_values_primitive[NUMCOMPS-1-DIM] = (probed_values[NUMCOMPS-1-DIM] - .5 * probed_values[0] * v2  - B2/8.0/PI) * (gamma - 1.0);
+            probed_values_primitive[NUMCOMPS-1-DIM] = (probed_values[NUMCOMPS-1-DIM] - .5 * probed_values[0] * v2  - B2/8.0/c_PI) * (gamma - 1.0);
 
-            double rho = probed_values_primitive[0]/mp; // /cm^3;
+            double rho = probed_values_primitive[0]/c_MP; // /cm^3;
             double Vx = probed_values_primitive[1]/1e5; // km/s;
             double Vy = probed_values_primitive[2]/1e5; // km/s;
             double Vz = probed_values_primitive[3]/1e5; // km/s;
@@ -311,10 +311,10 @@ namespace MHD_Probe {
             BT = H3_to_RTN_10*Bx + H3_to_RTN_11*By + H3_to_RTN_12*Bz;
             BN = H3_to_RTN_20*Bx + H3_to_RTN_21*By + H3_to_RTN_22*Bz;
 
-            // if (probed_values[0] != 0) cout << a_time  << " " << r_now/AU << " " << 90-latitude_now << " " <<  longitude_now << " " << rho << " " << VR << " " << VT << " " << VN << " "  << endl;
+            // if (probed_values[0] != 0) cout << a_time  << " " << r_now/c_AU << " " << 90-latitude_now << " " <<  longitude_now << " " << rho << " " << VR << " " << VT << " " << VN << " "  << endl;
             if (probed_values[0] != 0) {
                 outputFile << setw(16) << setprecision(12) << physical_time
-				<< setw(11) << setprecision(4) << r_now/AU		
+				<< setw(11) << setprecision(4) << r_now/c_AU		
 				<< setw(11) << setprecision(4) << 90-latitude_now
 				<< setw(11) << setprecision(4) << longitude_now
 				<< setw(11) << setprecision(4) << rho

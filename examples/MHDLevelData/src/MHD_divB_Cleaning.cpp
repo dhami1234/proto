@@ -18,21 +18,21 @@ namespace MHD_divB_Cleaning {
 
 #if DIM==2
 		a_P(0) = 0.;
-		a_P(1) = a_W(4)/4.0/PI;
-		a_P(2) = a_W(5)/4.0/PI;
-		a_P(3) = a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI;
-		//a_P(3) = a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI + dot_pro_sum3(0)/4.0/PI;
+		a_P(1) = a_W(4)/4.0/c_PI;
+		a_P(2) = a_W(5)/4.0/c_PI;
+		a_P(3) = a_W(1)*a_W(4)/4.0/c_PI + a_W(2)*a_W(5)/4.0/c_PI;
+		//a_P(3) = a_W(1)*a_W(4)/4.0/c_PI + a_W(2)*a_W(5)/4.0/c_PI + dot_pro_sum3(0)/4.0/c_PI;
 		a_P(4) = a_W(1);
 		a_P(5) = a_W(2);
 #endif
 
 #if DIM==3
 		a_P(0) = 0.;
-		a_P(1) = a_W(5)/4.0/PI;
-		a_P(2) = a_W(6)/4.0/PI;
-		a_P(3) = a_W(7)/4.0/PI;
-		a_P(4) = a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI;
-		//a_P(4) = a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI + dot_pro_sum3(0)/4.0/PI;
+		a_P(1) = a_W(5)/4.0/c_PI;
+		a_P(2) = a_W(6)/4.0/c_PI;
+		a_P(3) = a_W(7)/4.0/c_PI;
+		a_P(4) = a_W(1)*a_W(5)/4.0/c_PI + a_W(2)*a_W(6)/4.0/c_PI + a_W(3)*a_W(7)/4.0/c_PI;
+		//a_P(4) = a_W(1)*a_W(5)/4.0/c_PI + a_W(2)*a_W(6)/4.0/c_PI + a_W(3)*a_W(7)/4.0/c_PI + dot_pro_sum3(0)/4.0/c_PI;
 		a_P(5) = a_W(1);
 		a_P(6) = a_W(2);
 		a_P(7) = a_W(3);
@@ -117,7 +117,6 @@ namespace MHD_divB_Cleaning {
 		}
 
 		using namespace std;
-		//PR_TIME("MHDOp::operator");
 		a_Rhs.setVal(0.0);
 		double gamma = a_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz};

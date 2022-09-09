@@ -47,7 +47,7 @@ namespace MHDOp {
 			B2 += B*B;
 		}
 
-		a_W(NUMCOMPS-1-DIM) = (a_U(NUMCOMPS-1-DIM) - .5 * rho * v2  - B2/8.0/PI) * (gamma - 1.0);
+		a_W(NUMCOMPS-1-DIM) = (a_U(NUMCOMPS-1-DIM) - .5 * rho * v2  - B2/8.0/c_PI) * (gamma - 1.0);
 
 	}
 	PROTO_KERNEL_END(consToPrimF, consToPrim)
@@ -85,7 +85,7 @@ namespace MHDOp {
 			B2 += B_actual*B_actual;
 		}
 
-		a_W_sph(NUMCOMPS-1-DIM) = (a_U_sph(NUMCOMPS-1-DIM) - .5 * rho * v2  - B2/8.0/PI) * (gamma - 1.0);
+		a_W_sph(NUMCOMPS-1-DIM) = (a_U_sph(NUMCOMPS-1-DIM) - .5 * rho * v2  - B2/8.0/c_PI) * (gamma - 1.0);
 		// a_W_sph(NUMCOMPS-1-DIM) = a_U_sph(NUMCOMPS-1-DIM);
 
 	}
@@ -143,8 +143,8 @@ namespace MHDOp {
 
 			ce = sqrt(gamma*p/rho);
 			B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-			af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )+( abs(Bdir)*ce/sqrt(PI*rho) ))+
-			          sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )-( abs(Bdir)*ce/sqrt(PI*rho) ))) + abs(udir);
+			af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )+( abs(Bdir)*ce/sqrt(c_PI*rho) ))+
+			          sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )-( abs(Bdir)*ce/sqrt(c_PI*rho) ))) + abs(udir);
 			if (af > a_speed(0)) {a_speed(0) = af;}
 		}
 	}
@@ -313,7 +313,6 @@ namespace MHDOp {
 
 			}
 			Vector Rhs_d = m_divergence[d](F_f_mapped);
-			//PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 			Rhs_d *= -1./dx_d;
 			a_Rhs += Rhs_d;
 			// F_f_mapped_noghost += F_f_mapped;
@@ -456,7 +455,6 @@ namespace MHDOp {
 			double dx_d = dxd[d];
 			MHD_Riemann_Solvers::Spherical_Riemann_Solver(F_ave_f, W_ave_low, W_ave_high, W_ave_low_actual, W_ave_high_actual, a_r2detA_1_avg, a_r2detAA_1_avg, a_r2detAn_1_avg, a_rrdotdetA_2_avg, a_rrdotdetAA_2_avg, a_rrdotd3ncn_2_avg, a_rrdotdetA_3_avg, a_rrdotdetAA_3_avg, a_rrdotncd2n_3_avg, d, gamma, a_dx, a_dy, a_dz);	
 			Vector Rhs_d = m_divergence[d](F_ave_f);
-			//PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 			Rhs_d *= -1./dx_d;
 			a_Rhs += Rhs_d;
 			// F_f_mapped_noghost += F_ave_f;
@@ -488,8 +486,8 @@ namespace MHDOp {
 			B2 += B*B;
 		}
 
-		double p = std::max((a_U(NUMCOMPS-1-DIM) - .5 * rho * v2  - B2/8.0/PI) * (gamma - 1.0),1.0e-14);
-		a_U(NUMCOMPS-1-DIM) = p/(gamma-1.0) + .5 * rho * v2  + B2/8.0/PI;
+		double p = std::max((a_U(NUMCOMPS-1-DIM) - .5 * rho * v2  - B2/8.0/c_PI) * (gamma - 1.0),1.0e-14);
+		a_U(NUMCOMPS-1-DIM) = p/(gamma-1.0) + .5 * rho * v2  + B2/8.0/c_PI;
 
 
 	}
@@ -616,19 +614,19 @@ namespace MHDOp {
 	double volume = a_cell_volume(0);
 #if DIM==2
 		a_P(0) = (a_F(0)/volume)*0.;
-		a_P(1) = (a_F(0)/volume)*a_W(4)/4.0/PI;
-		a_P(2) = (a_F(0)/volume)*a_W(5)/4.0/PI;
-		a_P(3) = (a_F(0)/volume)*(a_W(1)*a_W(4)/4.0/PI + a_W(2)*a_W(5)/4.0/PI);
+		a_P(1) = (a_F(0)/volume)*a_W(4)/4.0/c_PI;
+		a_P(2) = (a_F(0)/volume)*a_W(5)/4.0/c_PI;
+		a_P(3) = (a_F(0)/volume)*(a_W(1)*a_W(4)/4.0/c_PI + a_W(2)*a_W(5)/4.0/c_PI);
 		a_P(4) = (a_F(0)/volume)*a_W(1);
 		a_P(5) = (a_F(0)/volume)*a_W(2);
 #endif
 
 #if DIM==3
 		a_P(0) = (a_F(0)/volume)*0.;
-		a_P(1) = (a_F(0)/volume)*a_W(5)/4.0/PI;
-		a_P(2) = (a_F(0)/volume)*a_W(6)/4.0/PI;
-		a_P(3) = (a_F(0)/volume)*a_W(7)/4.0/PI;
-		a_P(4) = (a_F(0)/volume)*(a_W(1)*a_W(5)/4.0/PI + a_W(2)*a_W(6)/4.0/PI + a_W(3)*a_W(7)/4.0/PI);
+		a_P(1) = (a_F(0)/volume)*a_W(5)/4.0/c_PI;
+		a_P(2) = (a_F(0)/volume)*a_W(6)/4.0/c_PI;
+		a_P(3) = (a_F(0)/volume)*a_W(7)/4.0/c_PI;
+		a_P(4) = (a_F(0)/volume)*(a_W(1)*a_W(5)/4.0/c_PI + a_W(2)*a_W(6)/4.0/c_PI + a_W(3)*a_W(7)/4.0/c_PI);
 		a_P(5) = (a_F(0)/volume)*a_W(1);
 		a_P(6) = (a_F(0)/volume)*a_W(2);
 		a_P(7) = (a_F(0)/volume)*a_W(3);

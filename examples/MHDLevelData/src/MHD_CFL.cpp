@@ -66,7 +66,7 @@ namespace MHD_CFL {
 		if (p < 0.0) p = 0.0;
 		ce = sqrt(gamma*p/rho);
 		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-		af = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho);
+		af = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
 		u_mag = sqrt(u*u+v*v+w*w);
 		// a_lambda(0) = af + u_mag;
 		a_lambda(0) = af + abs(udir);

@@ -66,9 +66,9 @@ namespace MHD_Artificial_Viscosity {
 		if (p < 0.0) p = 0.0;
 		ce = sqrt(gamma*p/rho);
 		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-		//a_Fast_MS_speed(0) = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )+( abs(Bdir)*ce/sqrt(PI*rho) ))+
-		//	  sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )-( abs(Bdir)*ce/sqrt(PI*rho) )));
-		a_Fast_MS_speed(0) = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho);
+		//a_Fast_MS_speed(0) = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )+( abs(Bdir)*ce/sqrt(c_PI*rho) ))+
+		//	  sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )-( abs(Bdir)*ce/sqrt(c_PI*rho) )));
+		a_Fast_MS_speed(0) = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
 	}
 	PROTO_KERNEL_END(Fast_MS_speed_calcF, Fast_MS_speed_calc)
 
@@ -166,9 +166,9 @@ namespace MHD_Artificial_Viscosity {
 		ce = sqrt(gamma*p/rho);
 		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
 		u_mag = sqrt(u*u+v*v+w*w);
-		//af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )+( B_mag*ce/sqrt(PI*rho) ))+
-		//	  sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )-( B_mag*ce/sqrt(PI*rho) )));
-		af = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho);
+		//af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )+( B_mag*ce/sqrt(c_PI*rho) ))+
+		//	  sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )-( B_mag*ce/sqrt(c_PI*rho) )));
+		af = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
 		double lambda = af + u_mag;
 		//lambda = af + abs(a_W_edge(1+a_d));
 		for (int i=0; i< NUMCOMPS; i++) {
@@ -243,7 +243,6 @@ namespace MHD_Artificial_Viscosity {
 
 
 		using namespace std;
-		//PR_TIME("MHDOp::operator");
 		a_Rhs.setVal(0.0);
 		double gamma = a_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz};
@@ -409,7 +408,7 @@ namespace MHD_Artificial_Viscosity {
 		if (a_d == 0) u_mag = abs(u);
 		if (a_d == 1) u_mag = abs(v);
 		if (a_d == 2) u_mag = abs(w);
-		af = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho_actual);
+		af = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho_actual);
 		double lambda = af + u_mag;
 		// if (a_d == 0) lambda = lambda * a_r2detA_1_avg(0);
 		// if (a_d == 1) lambda = lambda * a_rrdotdetA_2_avg(0);
