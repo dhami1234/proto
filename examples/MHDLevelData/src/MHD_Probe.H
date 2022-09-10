@@ -2,13 +2,10 @@
 
 #include "Proto.H"
 #include "MHDOp.H"
+#include "MHDLevelDataRK4.H"
 
 namespace MHD_Probe {
-    void Probe(ofstream &outputFile,
-        const BoxData<double,NUMCOMPS>& a_outdata,
+    void Probe(MHDLevelDataState& state,
                 const double a_time,
-                const double a_dx,
-                const double a_dy,
-                const double a_dz,
-                const double a_gamma);
+                bool give_space);
 }

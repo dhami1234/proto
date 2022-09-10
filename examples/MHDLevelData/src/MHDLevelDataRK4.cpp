@@ -180,14 +180,18 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 		} else {
 		    MHDOp::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);
         }
-		if (dt_new < dt_temp) dt_temp = dt_new;
+		if (!a_State.m_min_dt_calculated){
+			if (dt_new < dt_temp) dt_temp = dt_new;
+		}
 	}
-	double mintime;
-	#ifdef PR_MPI
-		MPI_Reduce(&dt_temp, &mintime, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
-		MPI_Bcast(&mintime, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	#endif
-	a_State.m_min_dt = mintime;
+	if (!a_State.m_min_dt_calculated){
+		double mintime;
+		#ifdef PR_MPI
+			MPI_Reduce(&dt_temp, &mintime, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
+			MPI_Bcast(&mintime, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+		#endif
+		a_State.m_min_dt = mintime;
+	}
 	a_State.m_divB_calculated = true; // This makes sure that divB is calculated only once in RK4
 	a_State.m_min_dt_calculated = true; // This makes sure that min_dt is calculated only once in RK4
 	a_DX*=a_dt;

@@ -9,16 +9,10 @@ namespace MHD_Output_Writer {
 	void Write_data(MHDLevelDataState& state,
 				const int k,
 				const double time,
-				const double dt, 
-				const double dx,
-				const double dy,
-				const double dz);
+				const double dt);
 
 	void Write_checkpoint(MHDLevelDataState& state,
 				const int k,
 				const double time,
-				const double dt, 
-				const double dx,
-				const double dy,
-				const double dz);											   
+				const double dt);											   
 }

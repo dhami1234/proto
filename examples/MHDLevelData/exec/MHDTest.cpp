@@ -152,9 +152,7 @@ int main(int argc, char* argv[])
 		int start_iter = 0;
 		if (inputs.restartStep != 0) {start_iter = inputs.restartStep;}
 		if(pid==0) cout << "starting time loop from step " << start_iter << " , maxStep = " << inputs.maxStep << endl;
-		ofstream outputFile;
-    	outputFile.open(inputs.Probe_data_file,std::ios::app);
-		if(pid==0) outputFile << endl;
+		bool give_space_in_probe_file = true;
 		double probe_cadence = 0;
 		for (int k = start_iter; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{	
@@ -208,29 +206,27 @@ int main(int argc, char* argv[])
 
 				int probe_cadence_new = floor(time/inputs.probe_cadence);
 				if (probe_cadence_new > probe_cadence){
-					for (auto dit : state.m_U)
-					{
-						MHD_Probe::Probe(outputFile, state.m_U[ dit],time,dx, dy, dz, inputs.gamma);
-					}
+					MHD_Probe::Probe(state,time,give_space_in_probe_file);
+					give_space_in_probe_file = false;
 					probe_cadence = probe_cadence_new;
 					if(pid==0) cout << "Probed" << endl;
 				}
 
 				if(((inputs.outputInterval > 0) && ((k)%inputs.outputInterval == 0)) || time == inputs.tstop || ((inputs.outputInterval > 0) && (k == 0 || k == inputs.restartStep)))
 				{	
-					MHD_Output_Writer::Write_data(state, k, time, dt, dx, dy, dz);			
+					MHD_Output_Writer::Write_data(state, k, time, dt);			
 					
 				}
 				if((((inputs.CheckpointInterval > 0) && ((k)%inputs.CheckpointInterval == 0)) || time == inputs.tstop || ((inputs.CheckpointInterval > 0) && (k == 0))) && (k!=start_iter || k==0))
 				{
-					MHD_Output_Writer::Write_checkpoint(state, k, time, dt, dx, dy, dz);	
+					MHD_Output_Writer::Write_checkpoint(state, k, time, dt);	
 				}
 			}
 			auto end = chrono::steady_clock::now();
 			if(pid==0) cout <<"nstep = " << k << " time = " << time << " time step = " << dt << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms"  << endl;
 
 		}	
-		outputFile.close();
+		
 
 		if (inputs.convTestType != 0) {
 			//Solution on a single patch

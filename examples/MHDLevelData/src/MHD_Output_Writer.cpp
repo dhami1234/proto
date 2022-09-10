@@ -16,11 +16,11 @@ namespace MHD_Output_Writer {
 	void Write_data(MHDLevelDataState& state,
 					const int k,
 					const double time,
-					const double dt, 
-					const double dx,
-					const double dy,
-					const double dz)
+					const double dt)
 	{
+		double dx = state.m_dx;
+		double dy = state.m_dy;
+		double dz = state.m_dz;
 		LevelBoxData<double,NUMCOMPS> new_state(state.m_dbl,Point::Ones(NGHOST));
 		LevelBoxData<double,NUMCOMPS> new_state3(state.m_dbl,Point::Zeros());
 		LevelBoxData<double,DIM> phys_coords(state.m_dbl,Point::Ones(NGHOST));
@@ -65,11 +65,11 @@ namespace MHD_Output_Writer {
 	void Write_checkpoint(MHDLevelDataState& state,
 					const int k,
 					const double time,
-					const double dt, 
-					const double dx,
-					const double dy,
-					const double dz)
+					const double dt)
 	{
+		double dx = state.m_dx;
+		double dy = state.m_dy;
+		double dz = state.m_dz;
 		LevelBoxData<double,NUMCOMPS> out_data2(state.m_dbl,Point::Zeros());
 		std::string filename_Checkpoint=inputs.Checkpoint_file_Prefix+std::to_string(k);
 		(state.m_U).copyTo(out_data2);

@@ -14,10 +14,6 @@ extern Parsefrominputs inputs;
 
 using namespace std;
 
-
-
-
-
 namespace MHD_Probe {
 
     //======================================================================
@@ -98,7 +94,6 @@ namespace MHD_Probe {
     double getPhysTime(double a_time)
     {      
         // double   timeRef      = eos_AU/m_lismV; // sec    
-        // time_t startBC      = getPosixTime(m_startBCPhys);
         time_t startBC      = getPosixTime(inputs.BC_start_time);
         double   timeSec      = (a_time);//*timeRef; // time in sec
         time_t timeSec_t    = (time_t)(floor(timeSec));
@@ -122,21 +117,19 @@ namespace MHD_Probe {
         
     }
 
-    void Probe(ofstream &outputFile,
-        const BoxData<double,NUMCOMPS>& a_outdata,
+    void Probe(MHDLevelDataState& state,
                 const double a_time,
-                const double a_dx,
-                const double a_dy,
-                const double a_dz,
-                const double a_gamma)
+                bool give_space)
 
     {
-        // static int closest_cell[3];
         int pid = procID();
-        Box dbx0 = a_outdata.box();
-        BoxData<double,DIM> x_sph_cc(dbx0);
-        MHD_Mapping::get_sph_coords_cc(x_sph_cc,dbx0,a_dx,a_dy,a_dz);
-
+        ofstream outputFile;
+    	outputFile.open(inputs.Probe_data_file,std::ios::app);
+		if(pid==0 && give_space) outputFile << endl;
+        double a_dx = state.m_dx;
+        double a_dy = state.m_dy;
+        double a_dz = state.m_dz;
+        double a_gamma = state.m_gamma;
         std::string probe_file = inputs.Probe_trajectory_file;
         int number_of_lines = 0;
         int totvars = 5; // Year DOY Radius Latitude Longitude
@@ -196,9 +189,6 @@ namespace MHD_Probe {
         }
         delete[] my_array;
 
-        // for (int i=0; i<number_of_lines; i++){    
-        //     if (pid == 0) cout << time_traj_file[i] << " " << r_traj_file[i] << " "<< lat_traj_file[i] << " "<< lon_traj_file[i] << endl;
-	    // }
         double physical_time = getPhysTime(a_time);
         double r_now = interpolate(time_traj_file, r_traj_file, physical_time, false);
         double latitude_now = interpolate(time_traj_file, lat_traj_file, physical_time, false);
@@ -265,69 +255,77 @@ namespace MHD_Probe {
         Point index_n0(pt0_neigbor,pt1_nearest,pt2_nearest);
         Point index_n1(pt0_nearest,pt1_neigbor,pt2_nearest);
         Point index_n2(pt0_nearest,pt1_nearest,pt2_neigbor);
-        if (dbx0.contains(index_cc)){
-            for(int i=0; i<NUMCOMPS; i++){
-                probed_values[i] = a_outdata(index_cc, i);
-                if (dbx0.contains(index_n0)) probed_values[i] += (a_outdata(index_n0, i)-a_outdata(index_cc, i))*(r_now          - x_sph_cc(index_cc,0))/(x_sph_cc(index_n0,0) - x_sph_cc(index_cc,0));
-                if (dbx0.contains(index_n1)) probed_values[i] += (a_outdata(index_n1, i)-a_outdata(index_cc, i))*(latitude_now*c_PI/180   - x_sph_cc(index_cc,1))/(x_sph_cc(index_n1,1) - x_sph_cc(index_cc,1));
-                if (dbx0.contains(index_n2)) probed_values[i] += (a_outdata(index_n2, i)-a_outdata(index_cc, i))*(longitude_now*c_PI/180  - x_sph_cc(index_cc,2))/(x_sph_cc(index_n2,2) - x_sph_cc(index_cc,2));
-            }
+        for (auto dit : state.m_U){
+            Box dbx0 = state.m_U[dit].box();
+            BoxData<double,DIM> x_sph_cc(dbx0);
+            MHD_Mapping::get_sph_coords_cc(x_sph_cc,dbx0,a_dx,a_dy,a_dz);
 
             
-            double v2 = 0.0;
-            double B2 = 0.0;
-            double gamma = a_gamma;
-            probed_values_primitive[0] = probed_values[0];
+            if (dbx0.contains(index_cc)){
+                for(int i=0; i<NUMCOMPS; i++){
+                    probed_values[i] = state.m_U[dit](index_cc, i);
+                    if (dbx0.contains(index_n0)) probed_values[i] += (state.m_U[dit](index_n0, i)-state.m_U[dit](index_cc, i))*(r_now          - x_sph_cc(index_cc,0))/(x_sph_cc(index_n0,0) - x_sph_cc(index_cc,0));
+                    if (dbx0.contains(index_n1)) probed_values[i] += (state.m_U[dit](index_n1, i)-state.m_U[dit](index_cc, i))*(latitude_now*c_PI/180   - x_sph_cc(index_cc,1))/(x_sph_cc(index_n1,1) - x_sph_cc(index_cc,1));
+                    if (dbx0.contains(index_n2)) probed_values[i] += (state.m_U[dit](index_n2, i)-state.m_U[dit](index_cc, i))*(longitude_now*c_PI/180  - x_sph_cc(index_cc,2))/(x_sph_cc(index_n2,2) - x_sph_cc(index_cc,2));
+                }
 
-            for (int i = 1; i <= DIM; i++)
-            {
-                double v, B;
-                v = probed_values[i] / probed_values[0];
-                B = probed_values[DIM+1+i];
-                probed_values_primitive[i] = v;
-                probed_values_primitive[DIM+1+i] = B;
-                v2 += v*v;
-                B2 += B*B;
-            }
+                
+                double v2 = 0.0;
+                double B2 = 0.0;
+                double gamma = a_gamma;
+                probed_values_primitive[0] = probed_values[0];
 
-            probed_values_primitive[NUMCOMPS-1-DIM] = (probed_values[NUMCOMPS-1-DIM] - .5 * probed_values[0] * v2  - B2/8.0/c_PI) * (gamma - 1.0);
+                for (int i = 1; i <= DIM; i++)
+                {
+                    double v, B;
+                    v = probed_values[i] / probed_values[0];
+                    B = probed_values[DIM+1+i];
+                    probed_values_primitive[i] = v;
+                    probed_values_primitive[DIM+1+i] = B;
+                    v2 += v*v;
+                    B2 += B*B;
+                }
 
-            double rho = probed_values_primitive[0]/c_MP; // /cm^3;
-            double Vx = probed_values_primitive[1]/1e5; // km/s;
-            double Vy = probed_values_primitive[2]/1e5; // km/s;
-            double Vz = probed_values_primitive[3]/1e5; // km/s;
-            double p = probed_values_primitive[4]*1e12; // picodyne/cm*2
-            double Bx = probed_values_primitive[5]*1e6; // microGauss
-            double By = probed_values_primitive[6]*1e6; // microGauss
-            double Bz = probed_values_primitive[7]*1e6; // microGauss
+                probed_values_primitive[NUMCOMPS-1-DIM] = (probed_values[NUMCOMPS-1-DIM] - .5 * probed_values[0] * v2  - B2/8.0/c_PI) * (gamma - 1.0);
 
-            double VR, VT, VN, BR, BT, BN;
+                double rho = probed_values_primitive[0]/c_MP; // /cm^3;
+                double Vx = probed_values_primitive[1]/1e5; // km/s;
+                double Vy = probed_values_primitive[2]/1e5; // km/s;
+                double Vz = probed_values_primitive[3]/1e5; // km/s;
+                double p = probed_values_primitive[4]*1e12; // picodyne/cm*2
+                double Bx = probed_values_primitive[5]*1e6; // microGauss
+                double By = probed_values_primitive[6]*1e6; // microGauss
+                double Bz = probed_values_primitive[7]*1e6; // microGauss
 
-            VR = H3_to_RTN_00*Vx + H3_to_RTN_01*Vy + H3_to_RTN_02*Vz;
-            VT = H3_to_RTN_10*Vx + H3_to_RTN_11*Vy + H3_to_RTN_12*Vz;
-            VN = H3_to_RTN_20*Vx + H3_to_RTN_21*Vy + H3_to_RTN_22*Vz;
+                double VR, VT, VN, BR, BT, BN;
 
-            BR = H3_to_RTN_00*Bx + H3_to_RTN_01*By + H3_to_RTN_02*Bz;
-            BT = H3_to_RTN_10*Bx + H3_to_RTN_11*By + H3_to_RTN_12*Bz;
-            BN = H3_to_RTN_20*Bx + H3_to_RTN_21*By + H3_to_RTN_22*Bz;
+                VR = H3_to_RTN_00*Vx + H3_to_RTN_01*Vy + H3_to_RTN_02*Vz;
+                VT = H3_to_RTN_10*Vx + H3_to_RTN_11*Vy + H3_to_RTN_12*Vz;
+                VN = H3_to_RTN_20*Vx + H3_to_RTN_21*Vy + H3_to_RTN_22*Vz;
 
-            // if (probed_values[0] != 0) cout << a_time  << " " << r_now/c_AU << " " << 90-latitude_now << " " <<  longitude_now << " " << rho << " " << VR << " " << VT << " " << VN << " "  << endl;
-            if (probed_values[0] != 0) {
-                outputFile << setw(16) << setprecision(12) << physical_time
-				<< setw(11) << setprecision(4) << r_now/c_AU		
-				<< setw(11) << setprecision(4) << 90-latitude_now
-				<< setw(11) << setprecision(4) << longitude_now
-				<< setw(11) << setprecision(4) << rho
-				<< setw(11) << setprecision(4) << VR
-				<< setw(11) << setprecision(4) << VT
-				<< setw(11) << setprecision(4) << VN
-				<< setw(11) << setprecision(4) << p
-				<< setw(11) << setprecision(4) << BR
-				<< setw(11) << setprecision(4) << BT
-				<< setw(11) << setprecision(4) << BN
-				<< endl;
+                BR = H3_to_RTN_00*Bx + H3_to_RTN_01*By + H3_to_RTN_02*Bz;
+                BT = H3_to_RTN_10*Bx + H3_to_RTN_11*By + H3_to_RTN_12*Bz;
+                BN = H3_to_RTN_20*Bx + H3_to_RTN_21*By + H3_to_RTN_22*Bz;
+
+                if (probed_values[0] != 0) {
+                    outputFile << setw(16) << setprecision(12) << physical_time
+                    << setw(11) << setprecision(4) << r_now/c_AU		
+                    << setw(11) << setprecision(4) << 90-latitude_now
+                    << setw(11) << setprecision(4) << longitude_now
+                    << setw(11) << setprecision(4) << rho
+                    << setw(11) << setprecision(4) << VR
+                    << setw(11) << setprecision(4) << VT
+                    << setw(11) << setprecision(4) << VN
+                    << setw(11) << setprecision(4) << p
+                    << setw(11) << setprecision(4) << BR
+                    << setw(11) << setprecision(4) << BT
+                    << setw(11) << setprecision(4) << BN
+                    << endl;
+                }
             }
         }
-        
+
+        outputFile.close();
+   
     }
 }

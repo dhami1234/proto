@@ -668,8 +668,6 @@ namespace MHDOp {
 	          bool a_divB_calculated,
 	          bool a_min_dt_calculated)
 	{
-		// auto t1 = chrono::steady_clock::now();
-		// int pid = procID();
 		Box dbx0 = a_U.box();
 		static Stencil<double> m_divergence[DIM];
 		static bool initialized = false;
@@ -717,8 +715,6 @@ namespace MHDOp {
 			}
 		}
 		forallInPlace_p(Scale_with_V_calc, a_Rhs, RhsV, a_cell_volume);
-		if (!a_divB_calculated) forallInPlace_p(Powell,a_Rhs_divB,W_cart,RhsV_divB,a_cell_volume);	
-		// auto t2 = chrono::steady_clock::now();	
-		// if(pid==0) cout << " Time taken by in Op: " << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"  << endl;		
+		if (!a_divB_calculated) forallInPlace_p(Powell,a_Rhs_divB,W_cart,RhsV_divB,a_cell_volume);		
 	}
 }
