@@ -20,6 +20,7 @@
 
 namespace Proto 
 {
+    typedef MotionItem<BoxPartition, BoxPartition> LevelMotionItem;
     // Forward Declarations
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class LevelBoxData;
@@ -51,19 +52,19 @@ namespace Proto
                 const DataIndex<BoxPartition>& a_index) const;
         
         /// Serial Write To Buffer
-        inline void linearOut(void* a_buf, const MotionItem<BoxPartition>& a_info);
+        inline void linearOut(void* a_buf, const LevelMotionItem& a_info);
         //inline void linearOut(void* a_buf, 
         //        const Box& a_bx,
         //        const DataIndex<BoxPartition>& a_index) const;
         
         /// Serial Read From Buffer
-        inline void linearIn(void* a_buf, const MotionItem<BoxPartition>& a_info);
+        inline void linearIn(void* a_buf, const LevelMotionItem& a_info);
         //inline void linearIn(void* a_buf, 
         //        const Box& a_bx,
         //        const DataIndex<BoxPartition>& a_index) const;
         
         /// Local Copy
-        inline void localCopy(const MotionItem<BoxPartition>& a_info);
+        inline void localCopy(const LevelMotionItem& a_info);
         //inline void localCopy(
         //    const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
         //    const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const;
@@ -76,7 +77,8 @@ namespace Proto
         A Copier used to implement copying of data between LevelBoxData objects.
     */
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
-    class LevelCopier : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, BoxPartition, SRC_MEM, DST_MEM>
+    class LevelCopier 
+    : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, BoxPartition, BoxPartition, SRC_MEM, DST_MEM>
     {
         public:
         
@@ -92,7 +94,8 @@ namespace Proto
         within a LevelBoxData.
     */
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, BoxPartition, MEM, MEM>
+    class LevelExchangeCopier
+    : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, BoxPartition, BoxPartition, MEM, MEM>
     {
         public:
 
@@ -252,9 +255,18 @@ namespace Proto
         /// Patch Size
         /**
           Computes the size (in data cells) of a single patch in *this.
-          The resulting patch ACCOUNTS FOR GHOST CELLS
+          The output accounts for both ghost cells and centering.
          */
         inline unsigned int patchSize() const;
+        
+        /// Patch Box
+        /**
+            Returns the Box corresponding to the valid cells of the data at a given index.
+            This box does not include ghost cells, but does account for centering.
+            For cell centered data, this is the same as layout()[a_index], but will
+            in general be different for other types of centering.
+         */
+        inline Box patchBox(const DataIndex<BoxPartition>& a_index) const;
 
         /// Linear In (Patch, Box)
         /**
