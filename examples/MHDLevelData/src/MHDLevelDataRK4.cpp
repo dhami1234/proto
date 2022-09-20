@@ -38,7 +38,8 @@ MHDLevelDataState::MHDLevelDataState(const ProblemDomain& a_probDom,
 	m_U.define(m_dbl,Point::Zero());
 	m_U_old.define(m_dbl,Point::Zero());
 	m_divB.define(m_dbl,Point::Ones(NGHOST));
-	m_BC.define(m_dbl,{{NGHOST,NGHOST,NGHOST}});
+	m_Viscosity.define(m_dbl,Point::Ones(NGHOST));
+	m_BC.define(m_dbl,Point::Ones(NGHOST));
 	m_Jacobian_ave.define(m_dbl,Point::Ones(NGHOST));
 	m_N_ave_f.define(m_dbl,Point::Ones(NGHOST));
 
@@ -136,8 +137,6 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 								   )
 {	
 	PR_TIME("MHDLevelDataRK4Op::operator");
-	// auto t1 = chrono::steady_clock::now();
-	// int pid = procID();
 	LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
 	auto idOp = (1.0)*Shift(Point::Zeros());
 	// (a_State.m_U).copyTo(new_state); // LevelBoxData copyTo doesn't copy ghost cells. Needs exchange if this is used
@@ -147,43 +146,39 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
         new_state[ dit]+=idOp((a_DX.m_DU)[ dit]);  //Phil found doing this improves performance
 	}
 	HDF5Handler h5;
-	new_state.defineExchange<PolarExchangeCopier>(2,1);
+	if (inputs.grid_type_global == 2){
+		new_state.defineExchange<PolarExchangeCopier>(2,1);
+	}
 	new_state.exchange(); 
 
 	
-	for (auto dit : new_state){	
-        if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
-			if (inputs.Spherical_2nd_order == 0){
-				MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[ dit],a_State.m_U[ dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
-				MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[ dit],a_State.m_U[ dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit], (a_State.m_detAA_avg)[ dit], (a_State.m_detAA_inv_avg)[ dit], (a_State.m_r2rdot_avg)[ dit], (a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit], inputs.LowBoundType,inputs.HighBoundType);
-			}
-			if (inputs.Spherical_2nd_order == 1){
-				MHD_Set_Boundary_Values::Set_Boundary_Values_Spherical_2O(new_state[ dit],a_State.m_U[ dit].box(), a_State.m_BC[ dit],a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
-			}
-		} 
-	}
-	// auto t2 = chrono::steady_clock::now();	
-	// if(pid==0) cout << " Time taken till filling GCs: " << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"  << endl;	
-
+	
+	if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
+		if (inputs.Spherical_2nd_order == 0){
+			MHD_Set_Boundary_Values::Set_Jacobian_Values(a_State);
+			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state,a_State);			
+		}
+		if (inputs.Spherical_2nd_order == 1){
+			MHD_Set_Boundary_Values::Set_Boundary_Values_Spherical_2O(new_state,a_State);
+		}
+	} 
+	
 	double dt_temp = 1.0e10;
 	double dt_new;
-	for (auto dit : a_State.m_U){	
-		//Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        if (inputs.grid_type_global == 2){
-			if (inputs.Spherical_2nd_order == 0){
-				MHDOp::step_spherical(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit],(a_State.m_A_1_avg)[ dit],(a_State.m_A_2_avg)[ dit],(a_State.m_A_3_avg)[ dit],(a_State.m_A_inv_1_avg)[ dit],(a_State.m_A_inv_2_avg)[ dit],(a_State.m_A_inv_3_avg)[ dit],(a_State.m_detAA_avg)[ dit],(a_State.m_detAA_inv_avg)[ dit],(a_State.m_r2rdot_avg)[ dit],(a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit],(a_State.m_r2detA_1_avg)[ dit],(a_State.m_r2detAA_1_avg)[ dit], (a_State.m_r2detAn_1_avg)[ dit],(a_State.m_A_row_mag_1_avg)[ dit], (a_State.m_rrdotdetA_2_avg)[ dit],(a_State.m_rrdotdetAA_2_avg)[ dit],(a_State.m_rrdotd3ncn_2_avg)[ dit],(a_State.m_A_row_mag_2_avg)[ dit],(a_State.m_rrdotdetA_3_avg)[ dit],(a_State.m_rrdotdetAA_3_avg)[ dit],(a_State.m_rrdotncd2n_3_avg)[ dit],(a_State.m_A_row_mag_3_avg)[ dit], false, false);
-			}
-			if (inputs.Spherical_2nd_order == 1){
-				PR_TIME("MHDOp::step_spherical_2O");
-				MHDOp::step_spherical_2O(a_DX.m_DU[ dit], a_State.m_divB[dit], dt_new, new_state[ dit],a_State.m_U[ dit].box(), a_State.m_x_sph_cc[dit], a_State.m_x_sph_fc_1[dit], a_State.m_x_sph_fc_2[dit], a_State.m_x_sph_fc_3[dit], a_State.m_dx_sph[dit], a_State.m_face_area[dit], a_State.m_cell_volume[dit], a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, a_State.m_divB_calculated, a_State.m_min_dt_calculated);
-			}
-		} else {
-		    MHDOp::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);
-        }
-		if (!a_State.m_min_dt_calculated){
-			if (dt_new < dt_temp) dt_temp = dt_new;
+		
+	
+	if (inputs.grid_type_global == 2){
+		if (inputs.Spherical_2nd_order == 0){
+			MHDOp::step_spherical(a_DX.m_DU,new_state,a_State, dt_temp);
 		}
+		if (inputs.Spherical_2nd_order == 1){
+			PR_TIME("MHDOp::step_spherical_2O");
+			MHDOp::step_spherical_2O(a_DX.m_DU,new_state,a_State, dt_temp);
+		}
+	} else {
+		MHDOp::step(a_DX.m_DU,new_state,a_State, dt_temp);
 	}
+
 	if (!a_State.m_min_dt_calculated){
 		double mintime;
 		#ifdef PR_MPI
@@ -193,6 +188,7 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 		a_State.m_min_dt = mintime;
 	}
 	a_State.m_divB_calculated = true; // This makes sure that divB is calculated only once in RK4
+	a_State.m_Viscosity_calculated = true; // This makes sure that Viscosity is calculated only once in RK4
 	a_State.m_min_dt_calculated = true; // This makes sure that min_dt is calculated only once in RK4
 	a_DX*=a_dt;
 }
@@ -234,31 +230,35 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
 	// (a_State.m_U).copyTo(new_state); // LevelBoxData copyTo doesn't copy ghost cells. Needs exchange if this is used
 	for (auto dit : new_state){	
 		(a_State.m_U[ dit]).copyTo(new_state[ dit]);
+		// (a_State.m_U_old[ dit]).copyTo(new_state[ dit]);
 		// new_state[ dit]+=(a_DX.m_DU)[ dit];
         new_state[ dit]+=idOp((a_DX.m_DU)[ dit]);  //Phil found doing this improves performance
 	}
-	new_state.defineExchange<PolarExchangeCopier>(2,1);
+	if (inputs.grid_type_global == 2){
+		new_state.defineExchange<PolarExchangeCopier>(2,1);
+	}
 	new_state.exchange(); 
 
-	for (auto dit : new_state){	
-        if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
-			if (inputs.Spherical_2nd_order == 0){
-				MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[ dit],a_State.m_U[ dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
-				MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[ dit],a_State.m_U[ dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit], (a_State.m_detAA_avg)[ dit], (a_State.m_detAA_inv_avg)[ dit], (a_State.m_r2rdot_avg)[ dit], (a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit], inputs.LowBoundType,inputs.HighBoundType);
-			}
-		} 
+	
+   if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
+		if (inputs.Spherical_2nd_order == 0){
+			MHD_Set_Boundary_Values::Set_Jacobian_Values(a_State);
+			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state,a_State);			
+		}
+		if (inputs.Spherical_2nd_order == 1){
+			MHD_Set_Boundary_Values::Set_Boundary_Values_Spherical_2O(new_state,a_State);
+		}
 	}
 
-	for (auto dit : a_State.m_U){	
-		//Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        if (inputs.grid_type_global == 2){
-			if (inputs.Spherical_2nd_order == 0){
-				MHD_Artificial_Viscosity::step_spherical(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit],(a_State.m_A_1_avg)[ dit],(a_State.m_A_2_avg)[ dit],(a_State.m_A_3_avg)[ dit],(a_State.m_A_inv_1_avg)[ dit],(a_State.m_A_inv_2_avg)[ dit],(a_State.m_A_inv_3_avg)[ dit],(a_State.m_detAA_avg)[ dit],(a_State.m_detAA_inv_avg)[ dit],(a_State.m_r2rdot_avg)[ dit],(a_State.m_detA_avg)[ dit],(a_State.m_A_row_mag_avg)[ dit],(a_State.m_r2detA_1_avg)[ dit],(a_State.m_r2detAA_1_avg)[ dit], (a_State.m_r2detAn_1_avg)[ dit],(a_State.m_A_row_mag_1_avg)[ dit], (a_State.m_rrdotdetA_2_avg)[ dit],(a_State.m_rrdotdetAA_2_avg)[ dit],(a_State.m_rrdotd3ncn_2_avg)[ dit],(a_State.m_A_row_mag_2_avg)[ dit],(a_State.m_rrdotdetA_3_avg)[ dit],(a_State.m_rrdotdetAA_3_avg)[ dit],(a_State.m_rrdotncd2n_3_avg)[ dit],(a_State.m_A_row_mag_3_avg)[ dit], false, false);
-			}
-		} else {
-		    MHD_Artificial_Viscosity::step(a_DX.m_DU[ dit],new_state[ dit],a_State.m_U[ dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[ dit],(a_State.m_N_ave_f)[ dit], false, false);
-        }
+	if (inputs.grid_type_global == 2){
+		if (inputs.Spherical_2nd_order == 0){
+			MHD_Artificial_Viscosity::step_spherical(a_DX.m_DU,new_state,a_State);
+		}
+	} else {
+		MHD_Artificial_Viscosity::step(a_DX.m_DU,new_state,a_State);
 	}
+	
+	// a_State.m_Viscosity.copyTo(a_DX.m_DU);
 	a_DX*=a_dt;
 }
 

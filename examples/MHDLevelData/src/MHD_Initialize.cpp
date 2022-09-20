@@ -340,17 +340,39 @@ namespace MHD_Initialize {
 			By = (2.0+abs(sin(theta)))*sin(theta)/rad/rad;
 		}
 
+		// if (inputs.init_condition_type == 21) {
+		// 	//////Modifying parameters for radially out flow in spherical grid///////
+
+		// 	double rad = sqrt(x*x+y*y+z*z);
+		// 	double phi = atan2(y,x);
+		// 	double theta = acos(z/rad);
+		// 	rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
+		// 	p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
+
+		// 	if (inputs.initialize_in_spherical_coords == 1){
+		// 		u = 5.0;
+		// 		v = 0.0;
+		// 		w = 0.0; 
+		// 	} else {
+		// 		u = 5.0*sin(theta)*cos(phi);
+		// 		v = 5.0*sin(theta)*sin(phi);
+		// 		w = 5.0*cos(theta);
+		// 	}
+		// }
+
 		if (inputs.init_condition_type == 21) {
 			//////Modifying parameters for radially out flow in spherical grid///////
-
 			double rad = sqrt(x*x+y*y+z*z);
 			double phi = atan2(y,x);
 			double theta = acos(z/rad);
-			rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
-			p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
+			// rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
+			rho = 700*1.67262192e-24*pow(inputs.r_in*c_AU/rad,2.0); // rho at 21.5 c_SR is about 700/cm3
+			// p = 1.0;
+			p = 1.0e-7*pow(inputs.r_in*c_AU/rad,2.0*a_gamma); // p near 21.5 c_SR is about 1e-7 dyne/cm2
+			// p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
 
 			if (inputs.initialize_in_spherical_coords == 1){
-				u = 5.0;
+				u = 500.0*1e5;  // v at 21.5 c_SR is about 500 km/s
 				v = 0.0;
 				w = 0.0; 
 			} else {
@@ -420,13 +442,12 @@ namespace MHD_Initialize {
 	}
 
 
-
-	void initializeState(BoxData<double,NUMCOMPS>& a_state,
-	                     const double a_dx,
-	                     const double a_dy,
-	                     const double a_dz,
-	                     const double a_gamma)
+	void initializeState(MHDLevelDataState& a_State)
 	{
+		double a_dx = a_State.m_dx;
+		double a_dy = a_State.m_dy;
+		double a_dz = a_State.m_dz;
+		double a_gamma = a_State.m_gamma;
 
 		static Stencil<double> m_derivative[DIM];
 		static Stencil<double> m_divergence[DIM];
@@ -443,78 +464,78 @@ namespace MHD_Initialize {
 			initialized =  true;
 		}
 
-		Box dbx0=a_state.box();
-		Box dbx = dbx0.grow(NGHOST);
-		Box dbx1 = dbx.grow(1);
-		BoxData<double,NUMCOMPS> UBig(dbx1);
-		BoxData<double,DIM> eta(dbx1);
-		MHD_Mapping::eta_calc(eta,dbx1,a_dx, a_dy, a_dz);
-		BoxData<double,DIM> x(dbx1);
-		
-		MHD_Mapping::eta_to_x_calc(x,eta, dbx1);
-		
-		// forallInPlace(InitializeState,dbx1,UBig,x,eta,a_gamma);
-		// cout << "Here1" << endl;
-		forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
-		// cout << "Here2" << endl;
-		{
-		Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-		Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
-		UBig +=  Lap;
-		}
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
+		for (auto dit : a_State.m_U){
+			Box dbx0=a_State.m_U[dit].box();
+			Box dbx = dbx0.grow(NGHOST);
+			Box dbx1 = dbx.grow(1);
+			BoxData<double,NUMCOMPS> UBig(dbx1);
+			BoxData<double,DIM> eta(dbx1);
+			MHD_Mapping::eta_calc(eta,dbx1,a_dx, a_dy, a_dz);
+			BoxData<double,DIM> x(dbx1);
+			
+			MHD_Mapping::eta_to_x_calc(x,eta, dbx1);
+			
+			// forallInPlace(InitializeState,dbx1,UBig,x,eta,a_gamma);
+			// cout << "Here1" << endl;
+			forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
+			// cout << "Here2" << endl;
+			{
+			Stencil<double> Lap2nd = Stencil<double>::Laplacian();
+			Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
+			UBig +=  Lap;
+			}
+			// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
 
-		Scalar Jacobian_ave(dbx);
+			Scalar Jacobian_ave(dbx);
 
-		if (inputs.grid_type_global == 2){
-			MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave, a_dx, a_dy, a_dz);
-		} else {
-			MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx, a_dy, a_dz, dbx);
-		}
+			if (inputs.grid_type_global == 2){
+				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave, a_dx, a_dy, a_dz);
+			} else {
+				MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx, a_dy, a_dz, dbx);
+			}
 
-		a_state = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, UBig);
-		for (int d=0; d<DIM; d++) {
-			Vector d_UBig = m_derivative[d](UBig);
-			Scalar d_Jacobian_ave = m_derivative[d](Jacobian_ave);
-			Vector dot_pro = forall<double,NUMCOMPS>(dot_pro_calcF,d_Jacobian_ave,d_UBig);
-			dot_pro *= 1./12.;
-			a_state += dot_pro;
+			a_State.m_U[dit] = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, UBig);
+			for (int d=0; d<DIM; d++) {
+				Vector d_UBig = m_derivative[d](UBig);
+				Scalar d_Jacobian_ave = m_derivative[d](Jacobian_ave);
+				Vector dot_pro = forall<double,NUMCOMPS>(dot_pro_calcF,d_Jacobian_ave,d_UBig);
+				dot_pro *= 1./12.;
+				a_State.m_U[dit] += dot_pro;
+			}
+			// MHD_Output_Writer::WriteBoxData_array_nocoord(a_State.m_U[dit], a_dx, a_dy, a_dz, "a_State.m_U");
+			// MHD_Output_Writer::WriteBoxData_array_nocoord(a_State.m_U[dit], a_dx, a_dy, a_dz, "a_state2");
+			// cout << "Here_in" << endl;
 		}
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_state, a_dx, a_dy, a_dz, "a_state");
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_state, a_dx, a_dy, a_dz, "a_state2");
-		// cout << "Here_in" << endl;
 	}
 
-
-	void initializeState_Spherical(BoxData<double,NUMCOMPS>& a_state,
-						 BoxData<double,DIM*DIM>& a_detAA_avg,
-						 BoxData<double,DIM*DIM>& a_detAA_inv_avg,
-	                     BoxData<double,1>& a_r2rdot_avg,
-	                     BoxData<double,1>& a_detA_avg,
-	                     BoxData<double,DIM>& a_A_row_mag_avg,
-	                     const double a_dx,
-	                     const double a_dy,
-	                     const double a_dz,
-	                     const double a_gamma)
+	void initializeState_Spherical(MHDLevelDataState& a_State)
 	{
-		Box dbx0=a_state.box();
-		Box dbx = dbx0.grow(NGHOST);
-		Box dbx1 = dbx.grow(1);
-		BoxData<double,NUMCOMPS> UBig(dbx1);
-		BoxData<double,DIM> eta(dbx1);
-		MHD_Mapping::eta_calc(eta,dbx1,a_dx, a_dy, a_dz);
-		BoxData<double,DIM> x(dbx1);		
-		MHD_Mapping::eta_to_x_calc(x,eta, dbx1);
-		forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
-		Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-		Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
-		// UBig +=  Lap;
 
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
-		MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_state, UBig, a_detAA_avg, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, a_A_row_mag_avg, true);
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_state, a_dx, a_dy, a_dz, "a_state");
-		// MHD_Mapping::JU_to_U_Sph_ave_calc_func(UBig, a_state, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, a_A_row_mag_avg, false);
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig_again");
+		double a_dx = a_State.m_dx;
+		double a_dy = a_State.m_dy;
+		double a_dz = a_State.m_dz;
+		double a_gamma = a_State.m_gamma;
+
+		for (auto dit : a_State.m_U){
+			Box dbx0=a_State.m_U[dit].box();
+			Box dbx = dbx0.grow(NGHOST);
+			Box dbx1 = dbx.grow(1);
+			BoxData<double,NUMCOMPS> UBig(dbx1);
+			BoxData<double,DIM> eta(dbx1);
+			MHD_Mapping::eta_calc(eta,dbx1,a_dx, a_dy, a_dz);
+			BoxData<double,DIM> x(dbx1);		
+			MHD_Mapping::eta_to_x_calc(x,eta, dbx1);
+			forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
+			Stencil<double> Lap2nd = Stencil<double>::Laplacian();
+			Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
+			// UBig +=  Lap;
+
+			// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
+			MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_State.m_U[dit], UBig, a_State.m_detAA_avg[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], true);
+			// MHD_Output_Writer::WriteBoxData_array_nocoord(a_State.m_U[dit], a_dx, a_dy, a_dz, "a_State.m_U");
+			// MHD_Mapping::JU_to_U_Sph_ave_calc_func(UBig, a_State.m_U[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], false);
+			// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig_again");
+		}
 	}
 
 	PROTO_KERNEL_START
@@ -623,23 +644,23 @@ namespace MHD_Initialize {
 		forallInPlace_p(InitializeStateSph2O,a_U,a_x,a_gamma);
 	}
 
-
-	void initializeState_Spherical_2O(BoxData<double,NUMCOMPS>& a_state,
-	                     const double a_dx,
-	                     const double a_dy,
-	                     const double a_dz,
-	                     const double a_gamma)
+	void initializeState_Spherical_2O(MHDLevelDataState& a_State)
 	{
-		Box dbx0 = a_state.box();
-		Box dbx = dbx0.grow(NGHOST);
-		Box dbx1 = dbx.grow(1);
-		BoxData<double,NUMCOMPS> UBig_sph(dbx1);
-		BoxData<double,DIM> x_sph(dbx1);
-		MHD_Mapping::get_sph_coords_cc(x_sph,dbx1,a_dx, a_dy, a_dz);
-		forallInPlace_p(InitializeStateSph2O,UBig_sph,x_sph,a_gamma);
-		MHD_Mapping::Spherical_to_Cartesian(a_state,UBig_sph,x_sph);
-		// MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_state, UBig, a_detAA_avg, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, a_A_row_mag_avg, true);
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig_again");
+		double a_dx = a_State.m_dx;
+		double a_dy = a_State.m_dy;
+		double a_dz = a_State.m_dz;
+		double a_gamma = a_State.m_gamma;
+		for (auto dit : a_State.m_U){
+			Box dbx0 = a_State.m_U[dit].box();
+			Box dbx = dbx0.grow(NGHOST);
+			Box dbx1 = dbx.grow(1);
+			BoxData<double,NUMCOMPS> UBig_sph(dbx1);
+			BoxData<double,DIM> x_sph(dbx1);
+			MHD_Mapping::get_sph_coords_cc(x_sph,dbx1,a_dx, a_dy, a_dz);
+			forallInPlace_p(InitializeStateSph2O,UBig_sph,x_sph,a_gamma);
+			MHD_Mapping::Spherical_to_Cartesian(a_State.m_U[dit],UBig_sph,x_sph);
+			// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig_again");
+		}
 	}
 
 }

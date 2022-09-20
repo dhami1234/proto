@@ -708,17 +708,32 @@ namespace MHD_Mapping {
 	                    const Var<double,NUMCOMPS>& a_W)
 	{
 		for (int i=0; i< DIM; i++) {
-			a_out_data(i) = a_phys_coords(i)/c_AU; // c_AU
+			if (inputs.grid_type_global == 2){
+				a_out_data(i) = a_phys_coords(i)/c_AU; // AU
+			} else {
+				a_out_data(i) = a_phys_coords(i); // cm
+			}
 		}
 		
-		a_out_data(DIM+0) = a_W(0)/c_MP; // /cm^3
-		a_out_data(DIM+1) = a_W(1)/1e5; // km/s
-		a_out_data(DIM+2) = a_W(2)/1e5; // km/s
-		a_out_data(DIM+3) = a_W(3)/1e5; // km/s
-		a_out_data(DIM+4) = a_W(4); // dyne/cm*2
-		a_out_data(DIM+5) = a_W(5); // Gauss
-		a_out_data(DIM+6) = a_W(6); // Gauss
-		a_out_data(DIM+7) = a_W(7); // Gauss
+		if (inputs.grid_type_global == 2){
+			a_out_data(DIM+0) = a_W(0)/c_MP; // /cm^3
+			a_out_data(DIM+1) = a_W(1)/1e5; // km/s
+			a_out_data(DIM+2) = a_W(2)/1e5; // km/s
+			a_out_data(DIM+3) = a_W(3)/1e5; // km/s
+			a_out_data(DIM+4) = a_W(4); // dyne/cm*2
+			a_out_data(DIM+5) = a_W(5); // Gauss
+			a_out_data(DIM+6) = a_W(6); // Gauss
+			a_out_data(DIM+7) = a_W(7); // Gauss
+		} else {
+			a_out_data(DIM+0) = a_W(0); // g/cm^3
+			a_out_data(DIM+1) = a_W(1); // cm/s
+			a_out_data(DIM+2) = a_W(2); // cm/s
+			a_out_data(DIM+3) = a_W(3); // cm/s
+			a_out_data(DIM+4) = a_W(4); // dyne/cm*2
+			a_out_data(DIM+5) = a_W(5); // Gauss
+			a_out_data(DIM+6) = a_W(6); // Gauss
+			a_out_data(DIM+7) = a_W(7); // Gauss
+		}
 
 	}
 	PROTO_KERNEL_END(out_data_joinF, out_data_join)

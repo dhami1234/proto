@@ -62,7 +62,7 @@ class Parsefrominputs {
     double r_in;
     double r_out;
     double C_rad; // A constant in exponential dr in spherical grid.
-    int convTestType; // 0 for no convergence test, 1 for space convergence, 2 for space and time convergence
+    int convTestType; // 0 for no convergence test, 1 for space convergence, 2 for time convergence, 3 for space and time convergence
 	int saveConvTestData;
 	int Spherical_2nd_order; // 1 if we want to turn off Phil's mapping and use spherical grid method of MS-FLUKSS
 	double BC_start_time; // In decimal year

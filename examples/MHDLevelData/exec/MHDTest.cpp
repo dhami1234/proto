@@ -44,6 +44,9 @@ int main(int argc, char* argv[])
 	int pid = procID();
 	//Reading inputs file
 	inputs.parsenow(argc,argv);
+	#ifdef PR_MPI
+		MPI_Barrier(MPI_COMM_WORLD);
+	#endif
 	// inputs.parsenow ();
 	int maxLev;	
 	// When using mapping, computational domain is always from 0 to 1. The physical grid is mapped from this cube.
@@ -91,6 +94,10 @@ int main(int argc, char* argv[])
 			dt = inputs.CFL*std::min({dx,dy,dz});
 			#endif
 		}
+		if (inputs.convTestType == 2)
+		{
+			dt /= pow(2,lev);
+		}
 		if (inputs.convTestType == 0) dt = 0.;
 		// Create an object state. state.m_U has all the consereved variables (multiplied by Jacobian for mapped grids)
 		// All the mapping variables, which are functions of mapping geometry are also included in this class object.
@@ -124,22 +131,18 @@ int main(int argc, char* argv[])
 		// Read data from h5 BC
 		BoxData<double, NUMCOMPS> BC_data;
 		std::vector<double> dtheta;
-		reader.readData(BC_data, inputs.BC_file);
-		reader.readGeom(dtheta, inputs.BC_file);
+		if (inputs.grid_type_global == 2) reader.readData(BC_data, inputs.BC_file);
+		if (inputs.grid_type_global == 2) reader.readGeom(dtheta, inputs.BC_file);
 		
 		if (inputs.restartStep == 0){
 			if (inputs.grid_type_global == 2 && (inputs.initialize_in_spherical_coords == 1)){
-				for (auto dit : state.m_U){	
-					if (inputs.Spherical_2nd_order == 0) MHD_Initialize::initializeState_Spherical((state.m_U)[ dit], (state.m_detAA_avg)[ dit], (state.m_detAA_inv_avg)[ dit], (state.m_r2rdot_avg)[ dit], (state.m_detA_avg)[ dit], (state.m_A_row_mag_avg)[ dit], state.m_dx, state.m_dy, state.m_dz,state.m_gamma);
-					if (inputs.Spherical_2nd_order == 1) MHD_Initialize::initializeState_Spherical_2O((state.m_U)[ dit], state.m_dx, state.m_dy, state.m_dz,state.m_gamma);
-				}
+				if (inputs.Spherical_2nd_order == 0) MHD_Initialize::initializeState_Spherical(state);
+				if (inputs.Spherical_2nd_order == 1) MHD_Initialize::initializeState_Spherical_2O(state);
 			} else {
-				for (auto dit : state.m_U){	
-					MHD_Initialize::initializeState((state.m_U)[ dit] ,state.m_dx, state.m_dy, state.m_dz, state.m_gamma);
-				}
+				MHD_Initialize::initializeState(state);
 			}
 		} else {
-			std::string filename_Checkpoint="Checkpoint_"+std::to_string(inputs.restartStep);
+			std::string filename_Checkpoint=inputs.Checkpoint_file_Prefix+std::to_string(inputs.restartStep);
 			LevelBoxData<double,NUMCOMPS> readData(state.m_dbl,Point::Zero()); 
 			h5.readLevel(readData, filename_Checkpoint);
 			for (auto dit : state.m_U){	
@@ -154,10 +157,12 @@ int main(int argc, char* argv[])
 		if(pid==0) cout << "starting time loop from step " << start_iter << " , maxStep = " << inputs.maxStep << endl;
 		bool give_space_in_probe_file = true;
 		double probe_cadence = 0;
+		double dt_old = dt;
 		for (int k = start_iter; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{	
 			auto start = chrono::steady_clock::now();
 			state.m_divB_calculated = false;
+			state.m_Viscosity_calculated = false;
 			state.m_min_dt_calculated = false;
 			for (auto dit : state.m_U){	
 				MHDOp::Fix_negative_P(state.m_U[ dit],inputs.gamma);	
@@ -178,7 +183,12 @@ int main(int argc, char* argv[])
 				EulerStep<MHDLevelDataState, MHDLevelDatadivBOp, MHDLevelDataDX> divBstep;
 				EulerStep<MHDLevelDataState, MHDLevelDataViscosityOp, MHDLevelDataDX> viscositystep;
 
-				MHD_Set_Boundary_Values::interpolate_h5_BC(state, BC_data, time);
+				if (inputs.grid_type_global == 2) MHD_Set_Boundary_Values::interpolate_h5_BC(state, BC_data, time);
+
+				if (takeviscositystep) {
+					// Take step for artificial viscosity
+					viscositystep.advance(time,dt_old,state);
+				}
 
 				if (inputs.convTestType == 1 || inputs.timeIntegratorType == 1) {
 					PR_TIME("eulerstep");
@@ -188,10 +198,6 @@ int main(int argc, char* argv[])
 						rk4.advance(time,dt,state);
 					}
 				}
-				if (takeviscositystep) {
-					// Take step for artificial viscosity
-					viscositystep.advance(time,dt,state);
-				}
 
 				if (inputs.takedivBstep == 1) {
 					// Take step for divB term
@@ -199,6 +205,7 @@ int main(int argc, char* argv[])
 					divBstep.advance(time,dt,state);
 				}
 				time += dt;
+				dt_old = dt;
 			}
 			
 			if (inputs.convTestType == 0)
@@ -237,11 +244,13 @@ int main(int argc, char* argv[])
 			U[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey, inputs.domainSizez)), Point::Zeros());
 			#endif
 			(state.m_U).copyTo(U[lev]);
-			inputs.domainSizex *= 2;
-			inputs.domainSizey *= 2;
-			inputs.domainSizez *= 2;
-			inputs.BoxSize *= 2; //For debugging: if you want to keep the number of boxes the same
-			if (inputs.convTestType == 2){
+			if (inputs.convTestType != 2){
+				inputs.domainSizex *= 2;
+				inputs.domainSizey *= 2;
+				inputs.domainSizez *= 2;
+				inputs.BoxSize *= 2; //For debugging: if you want to keep the number of boxes the same
+			}
+			if (inputs.convTestType == 2 || inputs.convTestType == 3){
 				inputs.maxStep *= 2;
 			}
 		}

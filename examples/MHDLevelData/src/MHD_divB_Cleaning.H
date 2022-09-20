@@ -18,15 +18,4 @@ namespace MHD_divB_Cleaning {
 			  BoxData<double,DIM*DIM>& a_N_ave_f,
 	          bool a_computeMaxWaveSpeed,
 	          bool a_callBCs);
-	  
-
-	void step_spherical_2O(BoxData<double,NUMCOMPS>& a_Rhs,
-	          const BoxData<double,NUMCOMPS>& a_U,
-	          const Box& a_rangeBox,
-	          const double a_dx,
-	          const double a_dy,
-	          const double a_dz,
-	          const double a_gamma,
-	          bool a_computeMaxWaveSpeed,
-	          bool a_callBCs);	
 }

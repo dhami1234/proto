@@ -7,22 +7,10 @@ using namespace Proto;
 
 namespace MHD_Initialize
 {
-	void initializeState(BoxData<double,NUMCOMPS>& a_state,
-	                     const double a_dx,
-	                     const double a_dy,
-	                     const double a_dz,
-	                     const double a_gamma);
+	void initializeState(MHDLevelDataState& a_State);
 
-	void initializeState_Spherical(BoxData<double,NUMCOMPS>& a_state,
-						 BoxData<double,DIM*DIM>& a_detAA_avg,
-						 BoxData<double,DIM*DIM>& a_detAA_inv_avg,
-	                     BoxData<double,1>& a_r2rdot_avg,
-	                     BoxData<double,1>& a_detA_avg,
-	                     BoxData<double,DIM>& a_A_row_mag_avg,
-	                     const double a_dx,
-	                     const double a_dy,
-	                     const double a_dz,
-	                     const double a_gamma);		
+	void initializeState_Spherical(MHDLevelDataState& a_State);
+		
 
 	void InitializeStatecalc(BoxData<double,NUMCOMPS>& a_U,
 	                         const BoxData<double,DIM>& a_x,
@@ -34,11 +22,9 @@ namespace MHD_Initialize
 	                         const BoxData<double,DIM>& a_x,
 	                         const double a_gamma);
 
-	void initializeState_Spherical_2O(BoxData<double,NUMCOMPS>& a_state,
-	                     const double a_dx,
-	                     const double a_dy,
-	                     const double a_dz,
-	                     const double a_gamma);							 
+
+	void initializeState_Spherical_2O(MHDLevelDataState& a_State);
+						 
 	// PROTO_KERNEL_START
 	// unsigned int InitializeStateF(const Point& a_pt,
 	// 							  State& a_U,

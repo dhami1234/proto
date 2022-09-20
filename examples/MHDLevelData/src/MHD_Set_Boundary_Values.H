@@ -5,42 +5,13 @@
 #include "MHDLevelDataRK4.H"
 namespace MHD_Set_Boundary_Values {
 
-	void Set_Boundary_Values(BoxData<double,NUMCOMPS>& a_JU,
-	                         const Box& a_rangeBox,
-	                         const ProblemDomain& a_probDomain,
-	                         const double a_dx,
-	                         const double a_dy,
-	                         const double a_dz,
-	                         const double a_gamma,
-	                         const BoxData<double,1>& Jacobian_ave,
-							 BoxData<double,DIM*DIM>& a_detAA_avg,
-							 BoxData<double,DIM*DIM>& a_detAA_inv_avg,
-	                  		 BoxData<double,1>& a_r2rdot_avg,
-	                 		 BoxData<double,1>& a_detA_avg,
-	                 		 BoxData<double,DIM>& a_A_row_mag_avg,
-	                         const int a_lowBCtype,
-	                         const int a_highBCtype);
+	void Set_Boundary_Values(LevelBoxData<double,NUMCOMPS>& a_JU,
+	                         MHDLevelDataState& a_State);
 
-	void Set_Boundary_Values_Spherical_2O(BoxData<double,NUMCOMPS>& a_U,
-	                         const Box& a_rangeBox,
-							 const BoxData<double,NUMCOMPS>& a_BC,
-	                         const ProblemDomain& a_probDomain,
-	                         const double a_dx,
-	                         const double a_dy,
-	                         const double a_dz,
-	                         const double a_gamma,
-	                         const int a_lowBCtype,
-	                         const int a_highBCtype);						 
+	void Set_Boundary_Values_Spherical_2O(LevelBoxData<double,NUMCOMPS>& a_U,
+	                         MHDLevelDataState& a_State);					 
 
-	void Set_Jacobian_Values(BoxData<double,1>& a_Jacobian_ave,
-	                         const Box& a_rangeBox,
-	                         const ProblemDomain& a_probDomain,
-	                         const double a_dx,
-	                         const double a_dy,
-	                         const double a_dz,
-	                         const double a_gamma,
-	                         const int a_lowBCtype,
-	                         const int a_highBCtype);
+	void Set_Jacobian_Values(MHDLevelDataState& a_State);
 
 	void interpolate_h5_BC(MHDLevelDataState& state,
 						const BoxData<double,NUMCOMPS>& BC_data,
