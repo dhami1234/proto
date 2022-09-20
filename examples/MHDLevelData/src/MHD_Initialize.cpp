@@ -474,11 +474,8 @@ namespace MHD_Initialize {
 			BoxData<double,DIM> x(dbx1);
 			
 			MHD_Mapping::eta_to_x_calc(x,eta, dbx1);
-			
-			// forallInPlace(InitializeState,dbx1,UBig,x,eta,a_gamma);
-			// cout << "Here1" << endl;
 			forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
-			// cout << "Here2" << endl;
+
 			{
 			Stencil<double> Lap2nd = Stencil<double>::Laplacian();
 			Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
@@ -488,23 +485,15 @@ namespace MHD_Initialize {
 
 			Scalar Jacobian_ave(dbx);
 
-			if (inputs.grid_type_global == 2){
-				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave, a_dx, a_dy, a_dz);
-			} else {
-				MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx, a_dy, a_dz, dbx);
-			}
-
-			a_State.m_U[dit] = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, UBig);
+			a_State.m_U[dit] = forall<double,NUMCOMPS>(dot_pro_calcF, a_State.m_Jacobian_ave[dit], UBig);
 			for (int d=0; d<DIM; d++) {
 				Vector d_UBig = m_derivative[d](UBig);
-				Scalar d_Jacobian_ave = m_derivative[d](Jacobian_ave);
+				Scalar d_Jacobian_ave = m_derivative[d](a_State.m_Jacobian_ave[dit]);
 				Vector dot_pro = forall<double,NUMCOMPS>(dot_pro_calcF,d_Jacobian_ave,d_UBig);
 				dot_pro *= 1./12.;
 				a_State.m_U[dit] += dot_pro;
 			}
 			// MHD_Output_Writer::WriteBoxData_array_nocoord(a_State.m_U[dit], a_dx, a_dy, a_dz, "a_State.m_U");
-			// MHD_Output_Writer::WriteBoxData_array_nocoord(a_State.m_U[dit], a_dx, a_dy, a_dz, "a_state2");
-			// cout << "Here_in" << endl;
 		}
 	}
 

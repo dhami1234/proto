@@ -7,12 +7,6 @@
 #include "MHD_Constants.H"
 #include <algorithm>    // std::min
 
-// extern int init_condition_type;
-// extern int grid_type_global;
-// extern double r_in;
-// extern double r_out;
-// extern bool initialize_in_spherical_coords;
-
 typedef BoxData<double,1> Scalar;
 typedef BoxData<double,NUMCOMPS> Vector;
 

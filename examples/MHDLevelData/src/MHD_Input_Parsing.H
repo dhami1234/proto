@@ -29,7 +29,6 @@ class Parsefrominputs {
     int slope_flattening_apply;
     int non_linear_visc_apply;
     int linear_visc_apply;
-    int pole_correction;
     int takedivBstep;
     int timeIntegratorType; // 1: Euler Step    4: RK4 
     int init_condition_type;
@@ -104,7 +103,6 @@ class Parsefrominputs {
 		args.add("slope_flattening_apply",  slope_flattening_apply);
 		args.add("non_linear_visc_apply",  non_linear_visc_apply);
 		args.add("linear_visc_apply",  linear_visc_apply);
-		args.add("pole_correction",  pole_correction);
 		args.add("takedivBstep",  takedivBstep);
 		args.add("timeIntegratorType",  timeIntegratorType);
 		args.add("init_condition_type",  init_condition_type);
@@ -158,7 +156,6 @@ class Parsefrominputs {
 			cout << "slope_flattening_apply: "    << slope_flattening_apply << endl;
 			cout << "non_linear_visc_apply: "    << non_linear_visc_apply << endl;
 			cout << "linear_visc_apply: "    << linear_visc_apply << endl;
-			cout << "pole_correction: "    << pole_correction << endl;
 			cout << "takedivBstep: "    << takedivBstep << endl;
 			cout << "timeIntegratorType: "    << takedivBstep << endl;
 			cout << "init_condition_type: "    << init_condition_type << endl;

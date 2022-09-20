@@ -155,7 +155,6 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 	
 	if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
 		if (inputs.Spherical_2nd_order == 0){
-			MHD_Set_Boundary_Values::Set_Jacobian_Values(a_State);
 			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state,a_State);			
 		}
 		if (inputs.Spherical_2nd_order == 1){
@@ -242,7 +241,6 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
 	
    if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
 		if (inputs.Spherical_2nd_order == 0){
-			MHD_Set_Boundary_Values::Set_Jacobian_Values(a_State);
 			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state,a_State);			
 		}
 		if (inputs.Spherical_2nd_order == 1){
@@ -257,8 +255,7 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
 	} else {
 		MHD_Artificial_Viscosity::step(a_DX.m_DU,new_state,a_State);
 	}
-	
-	// a_State.m_Viscosity.copyTo(a_DX.m_DU);
+
 	a_DX*=a_dt;
 }
 

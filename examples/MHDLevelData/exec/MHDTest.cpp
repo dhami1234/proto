@@ -47,7 +47,6 @@ int main(int argc, char* argv[])
 	#ifdef PR_MPI
 		MPI_Barrier(MPI_COMM_WORLD);
 	#endif
-	// inputs.parsenow ();
 	int maxLev;	
 	// When using mapping, computational domain is always from 0 to 1. The physical grid is mapped from this cube.
 	if (inputs.grid_type_global > 1){
@@ -276,7 +275,8 @@ int main(int argc, char* argv[])
 				//NOTE: this assumes that the domain length is 1.0, which is assumed throughout this code. May cause errors if this changes.
 				double dx=1./(err.box().size(0));
 				if (inputs.saveConvTestData){
-					WriteBoxData(filename.c_str(),err,dx);
+					HDF5Handler h5;
+					h5.writePatch({"err"}, 1, err, filename.c_str());					
 				}
 				std::cout << "Lev: " << ilev << " , " << ErrMax[ilev] << std::endl;
 			}

@@ -100,59 +100,6 @@ namespace MHDOp {
 		W_bar = forall<double,NUMCOMPS>(consToPrimSph,a_U_sph,a_U_sph_actual, gamma);
 	}
 
-
-	PROTO_KERNEL_START
-	void waveSpeedBoundF(Var<double,1>& a_speed,
-	                     const State& a_W,
-	                     double a_gamma)
-	{
-		double gamma = a_gamma;
-		double rho=0., u=0., v=0., w=0., p=0., Bx=0., By=0., Bz=0., ce, af, B_mag, Bdir, udir;
-
-#if DIM == 2
-		rho = a_W(0);
-		u   = a_W(1);
-		v   = a_W(2);
-		p   = a_W(3);
-		Bx  = a_W(4);
-		By  = a_W(5);
-#endif
-#if DIM == 3
-		rho = a_W(0);
-		u   = a_W(1);
-		v   = a_W(2);
-		w   = a_W(3);
-		p   = a_W(4);
-		Bx  = a_W(5);
-		By  = a_W(6);
-		Bz  = a_W(7);
-#endif
-		a_speed(0) = 0.0;
-		for (int dir = 0; dir< DIM; dir++) {
-			if (dir == 0) {
-				Bdir = Bx;
-				udir = u;
-			};
-			if (dir == 1) {
-				Bdir = By;
-				udir = v;
-			};
-			if (dir == 2) {
-				Bdir = Bz;
-				udir = w;
-			};
-
-			ce = sqrt(gamma*p/rho);
-			B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-			af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )+( abs(Bdir)*ce/sqrt(c_PI*rho) ))+
-			          sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )-( abs(Bdir)*ce/sqrt(c_PI*rho) ))) + abs(udir);
-			if (af > a_speed(0)) {a_speed(0) = af;}
-		}
-	}
-	PROTO_KERNEL_END(waveSpeedBoundF, waveSpeedBound)
-
-
-
 	PROTO_KERNEL_START
 	void dot_pro_calcFF(State& a_dot_pro,
 	                    const Var<double,1>& a_d_perp_N_s,
@@ -180,163 +127,8 @@ namespace MHDOp {
 	}
 	PROTO_KERNEL_END(F_f_mapped1D_calcF, F_f_mapped1D_calc)
 
-	PROTO_KERNEL_START
-	void viscosity1_calcF(Var<double,1>& a_viscosity,
-	                      const Var<double,1>& a_v,
-	                      const Var<double,1>& a_v_behind)
-	{
-		a_viscosity(0) = a_v(0)-a_v_behind(0);
-	}
-	PROTO_KERNEL_END(viscosity1_calcF, viscosity1_calc)
 
-	PROTO_KERNEL_START
-	void v_d2_div_calcF(Var<double,1>& a_v_d2_div,
-	                    const Var<double,1>& v_d2_ahead,
-	                    const Var<double,1>& v_d2_behind,
-	                    const Var<double,1>& v_d2_behind_dp,
-	                    const Var<double,1>& v_d2_behind_dm)
-	{
-		a_v_d2_div(0) = (v_d2_ahead(0)-v_d2_behind(0)+v_d2_behind_dp(0)-v_d2_behind_dm(0))/4.0;
-	}
-	PROTO_KERNEL_END(v_d2_div_calcF, v_d2_div_calc)
-
-
-	PROTO_KERNEL_START
-	void Fast_MS_speed_calcF(Var<double,1>& a_Fast_MS_speed,
-	                         const State& a_W_bar,
-	                         int a_d,
-	                         double a_gamma)
-	{
-		double gamma = a_gamma;
-		double rho=0., p=0., Bx=0., By=0., Bz=0., ce, B_mag, Bdir;
-#if DIM == 2
-		rho = a_W_bar(0);
-		p   = a_W_bar(3);
-		Bx  = a_W_bar(4);
-		By  = a_W_bar(5);
-#endif
-#if DIM == 3
-		rho = a_W_bar(0);
-		p   = a_W_bar(4);
-		Bx  = a_W_bar(5);
-		By  = a_W_bar(6);
-		Bz  = a_W_bar(7);
-#endif
-		if (a_d == 0) {
-			Bdir = Bx;
-		};
-		if (a_d == 1) {
-			Bdir = By;
-		};
-		if (a_d == 2) {
-			Bdir = Bz;
-		};
-		if (p < 0.0) p = 0.0;
-		ce = sqrt(gamma*p/rho);
-		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-		//a_Fast_MS_speed(0) = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )+( abs(Bdir)*ce/sqrt(c_PI*rho) ))+
-		//	  sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )-( abs(Bdir)*ce/sqrt(c_PI*rho) )));
-		a_Fast_MS_speed(0) = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
-	}
-	PROTO_KERNEL_END(Fast_MS_speed_calcF, Fast_MS_speed_calc)
-
-	PROTO_KERNEL_START
-	void Fast_MS_speed_min_calcF(Var<double,1>& a_Fast_MS_speed_min,
-	                             const Var<double,1>& a_Fast_MS_speed,
-	                             const Var<double,1>& a_Fast_MS_speed_behind)
-	{
-		a_Fast_MS_speed_min(0) = std::min({a_Fast_MS_speed(0),a_Fast_MS_speed_behind(0)});
-	}
-	PROTO_KERNEL_END(Fast_MS_speed_min_calcF, Fast_MS_speed_min_calc)
-
-
-	PROTO_KERNEL_START
-	void Visc_coef_calcF(Var<double,1>& a_Visc_coef,
-	                     const Var<double,1>& a_h_lambda,
-	                     const Var<double,1>& a_Fast_MS_speed_min)
-	{
-		if (a_h_lambda(0) < 0) {
-			double temp = a_h_lambda(0)*a_h_lambda(0)/0.3/a_Fast_MS_speed_min(0)/a_Fast_MS_speed_min(0);
-			a_Visc_coef(0) = a_h_lambda(0)*std::min({temp,1.0});
-		} else {
-			a_Visc_coef(0) = 0.0;
-		}
-	}
-	PROTO_KERNEL_END(Visc_coef_calcF, Visc_coef_calc)
-
-	PROTO_KERNEL_START
-	void mu_f_calcF(State& a_mu_f,
-	                const Var<double,1>& a_Visc_coef,
-	                const State& a_U,
-	                const State& a_U_behind)
-	{
-		for (int i=0; i< NUMCOMPS; i++) {
-			a_mu_f(i) = 0.3*a_Visc_coef(0)*(a_U(i)-a_U_behind(i));
-		}
-	}
-	PROTO_KERNEL_END(mu_f_calcF, mu_f_calc)
-
-	PROTO_KERNEL_START
-	void lambdacalcF(State& a_lambda,
-	                 const State& a_W_edge,
-	                 int a_d,
-	                 double a_gamma)
-	{
-		double gamma = a_gamma;
-		double rho=0., u=0., v=0., w=0., p=0., Bx=0., By=0., Bz=0., ce, af, B_mag, u_mag, Bdir, udir;
-#if DIM == 2
-		rho = a_W_edge(0);
-		u   = a_W_edge(1);
-		v   = a_W_edge(2);
-		p   = a_W_edge(3);
-		Bx  = a_W_edge(4);
-		By  = a_W_edge(5);
-#endif
-#if DIM == 3
-		rho = a_W_edge(0);
-		u   = a_W_edge(1);
-		v   = a_W_edge(2);
-		w   = a_W_edge(3);
-		p   = a_W_edge(4);
-		Bx  = a_W_edge(5);
-		By  = a_W_edge(6);
-		Bz  = a_W_edge(7);
-#endif
-		if (p < 0.0) p = 0.0;
-		ce = sqrt(gamma*p/rho);
-		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-		u_mag = sqrt(u*u+v*v+w*w);
-		//af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )+( B_mag*ce/sqrt(c_PI*rho) ))+
-		//	  sqrt((ce*ce)+( B_mag*B_mag/(4.0*c_PI*rho) )-( B_mag*ce/sqrt(c_PI*rho) )));
-		af = sqrt(ce*ce + B_mag*B_mag/4.0/c_PI/rho);
-		double lambda = af + u_mag;
-		//lambda = af + abs(a_W_edge(1+a_d));
-		for (int i=0; i< NUMCOMPS; i++) {
-			a_lambda(i) = lambda;
-		}
-	}
-	PROTO_KERNEL_END(lambdacalcF, lambdacalc)
-
-	PROTO_KERNEL_START
-	void N_d_sqcalcF(Var<double,1>& a_N_d_sq,
-	                 const Var<double,1>& a_N_s_d_ave_f)
-	{
-		a_N_d_sq(0) += a_N_s_d_ave_f(0)*a_N_s_d_ave_f(0);
-	}
-	PROTO_KERNEL_END(N_d_sqcalcF, N_d_sqcalc)
-
-	PROTO_KERNEL_START
-	void sqrtCalcF(Var<double,NUMCOMPS>& a_N_d,
-	               const Var<double,1>& a_N_d_sq,
-				   const double a_dx_d)
-	{
-		for (int i=0; i< NUMCOMPS; i++) {
-			// a_N_d(i) = sqrt(a_N_d_sq(0))/(-a_dx_d);
-			a_N_d(i) = sqrt(a_N_d_sq(0));
-		}
-	}
-	PROTO_KERNEL_END(sqrtCalcF, sqrtCalc)
-
+	
 
 
 	void step(LevelBoxData<double,NUMCOMPS>& a_Rhs,
@@ -393,8 +185,7 @@ namespace MHDOp {
 			Box dbx2 = dbx0.grow(0-NGHOST);
 
 			a_Rhs[dit].setVal(0.0);
-			// if (!a_State.m_Viscosity_calculated) a_State.m_Viscosity[dit].setVal(0.0);
-			
+		
 			Vector a_U_ave(dbx0);
 			MHD_Mapping::JU_to_U_calc(a_U_ave, a_JU_ave[dit], a_State.m_Jacobian_ave[dit], dbx0);
 			Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U_ave, gamma);
@@ -417,10 +208,6 @@ namespace MHDOp {
 				W_ave_low_temp = m_interp_L[d](W_ave);
 				W_ave_high_temp = m_interp_H[d](W_ave);
 
-				// if (inputs.linear_visc_apply == 1 && !a_State.m_Viscosity_calculated){ 
-				// 	Lambda_f = forall<double,NUMCOMPS>(lambdacalc, W_ave_low_temp, d, gamma);
-				// 	N_d_sq.setVal(0.0);
-				// }
 
 
 				MHD_Limiters::MHD_Limiters_4O(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);
@@ -463,92 +250,10 @@ namespace MHDOp {
 
 
 					F_f_mapped += F_f_mapped1D;
-
-					// if (inputs.linear_visc_apply == 1 && !a_State.m_Viscosity_calculated){ 
-					// 	forallInPlace(N_d_sqcalc,dbx1,N_d_sq,N_s_d_ave_f);
-					// }
-
 				}
 				Vector Rhs_d = m_divergence[d](F_f_mapped);
 				Rhs_d *= -1./dx_d;
 				a_Rhs[dit] += Rhs_d;
-
-				// if (inputs.linear_visc_apply == 1 && !a_State.m_Viscosity_calculated) {
-				// 	Vector N_d = forall<double,NUMCOMPS>(sqrtCalc, N_d_sq, dx_d);
-				// 	Stencil<double> SPlus = 1.0*Shift(Point::Basis(d)) ;
-				// 	Stencil<double> SMinus = 1.0*Shift(-Point::Basis(d));
-				// 	Stencil<double> IdOp = 1.0*Shift(Point::Zeros());
-				// 	Stencil<double> D1 = SPlus - IdOp;
-				// 	Stencil<double> D2 = SPlus - 2.0*IdOp + SMinus;
-				// 	Stencil<double> D5 = (-1.0) * D1 * D2  * D2;
-				// 	Vector F_f = D5(a_U_ave, 1.0/64);
-				// 	Vector F_f_behind = SMinus(F_f);
-				// 	F_f_behind *= Lambda_f;
-				// 	F_f_behind *= N_d;
-
-				// 	Vector Rhs_d = m_divergence[d](F_f_behind);
-				// 	Rhs_d *= -1./dxd[d];
-				// 	a_State.m_Viscosity[dit] += Rhs_d;
-				// }
-
-
-
-				// if (inputs.non_linear_visc_apply == 1 && !a_State.m_Viscosity_calculated) {
-				// 	Vector F_f(dbx1), F_ave_f(dbx1);
-				// 	Scalar Lambda_f(dbx1);
-				// 	Vector F_f_mapped(dbx1);
-				// 	F_f_mapped.setVal(0.0);
-				// 	for (int s = 0; s < DIM; s++) {
-				// 		Scalar v_s =  slice(W_bar,1+s);
-				// 		Scalar v_s_behind = alias(v_s,Point::Basis(d)*(1));
-				// 		Scalar h_lambda = forall<double>(viscosity1_calc,v_s,v_s_behind);
-				// 		for (int s2 = 0; s2 < DIM; s2++) {
-				// 			if (s2!=s) {
-				// 				for (int d2 = 0; d2 < DIM; d2++) {
-				// 					if (d2!=d) {
-				// 						Scalar v_s2 = slice(W_bar,1+s2);
-				// 						Scalar v_s2_ahead = alias(v_s2,Point::Basis(d2)*(-1));
-				// 						Scalar v_s2_behind = alias(v_s2,Point::Basis(d2)*(1));
-				// 						Scalar v_s2_behind_dp = alias(v_s2_ahead,Point::Basis(d)*(1));
-				// 						Scalar v_s2_behind_dm = alias(v_s2_behind,Point::Basis(d)*(1));
-				// 						Scalar v_s2_div = forall<double>(v_d2_div_calc,v_s2_ahead,v_s2_behind,v_s2_behind_dp,v_s2_behind_dm);
-				// 						h_lambda += v_s2_div;
-				// 					}
-				// 				}
-				// 			}
-				// 		}
-				// 		Scalar Fast_MS_speed = forall<double>(Fast_MS_speed_calc, W_bar, s, gamma);
-				// 		Scalar Fast_MS_speed_behind = alias(Fast_MS_speed,Point::Basis(d)*(1));
-				// 		Scalar Fast_MS_speed_min = forall<double>(Fast_MS_speed_min_calc,Fast_MS_speed,Fast_MS_speed_behind);
-				// 		Scalar Visc_coef = forall<double>(Visc_coef_calc,h_lambda,Fast_MS_speed_min);
-				// 		Vector a_U_behind = alias(a_U_ave,Point::Basis(d)*(1));
-				// 		Vector mu_f = forall<double,NUMCOMPS>(mu_f_calc, Visc_coef, a_U_ave, a_U_behind);
-				// 		Scalar N_s_d_ave_f = slice(a_State.m_N_ave_f[dit],d*DIM+s);
-
-				// 		F_ave_f = m_convolve_f[d](mu_f);
-
-				// 		Vector dot_pro_sum(dbx1);
-				// 		dot_pro_sum.setVal(0.0);
-				// 		for (int s_temp = 0; s_temp < DIM; s_temp++) {
-				// 			if (s_temp != d) {
-				// 				Scalar d_perp_N_s = m_derivative[s_temp](N_s_d_ave_f);
-				// 				Vector d_perp_F = m_derivative[s_temp](F_ave_f);
-				// 				Vector dot_pro = forall<double,NUMCOMPS>(dot_pro_calcF,d_perp_N_s,d_perp_F);
-				// 				dot_pro_sum += dot_pro;
-				// 			}
-				// 		}
-				// 		double dx_d = dxd[d];
-				// 		Vector F_f_mapped1D = forall<double,NUMCOMPS>(F_f_mapped1D_calc,F_ave_f,N_s_d_ave_f,dot_pro_sum,dx_d);
-
-				// 		F_f_mapped += F_f_mapped1D;
-				// 	}
-				// 	Vector Rhs_d = m_divergence[d](F_f_mapped);
-				// 	Rhs_d *= -1./dxd[d];
-				// 	a_State.m_Viscosity[dit] += Rhs_d;
-
-				// }
-
-
 			}
 		}
 	}

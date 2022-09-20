@@ -123,12 +123,6 @@ namespace MHD_Set_Boundary_Values {
 				// Box BoundBox1 = BoundBox.grow(1);
 				Box BoundBox1 = BoundBox.grow(0);
 				Vector a_U_ghost(BoundBox), a_JU_ghost(BoundBox);
-				Scalar Jacobian_ave2(BoundBox1);
-				if (inputs.grid_type_global == 2){
-					MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
-				} else {
-					MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
-				}
 
 				for (int i = 1; i <= NGHOST; i++ ) {
 					//Using outermost 2 layers to extrapolate to rest.
@@ -140,64 +134,10 @@ namespace MHD_Set_Boundary_Values {
 				if (inputs.grid_type_global == 2 && inputs.initialize_in_spherical_coords == 1){
 					MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_JU_ghost, a_U_ghost, a_State.m_detAA_avg[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], false);
 				} else {
-					a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
+					a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, a_State.m_Jacobian_ave[dit], a_U_ghost);
 				}
-				// a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
+				// a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, a_State.m_Jacobian_ave[dit], a_U_ghost);
 				a_JU_ghost.copyTo(a_JU[dit],BoundBox);
-			}
-		}
-	}
-
-
-
-
-
-	void Set_Jacobian_Values(MHDLevelDataState& a_State)
-	{
-
-		double a_dx = a_State.m_dx;
-		double a_dy = a_State.m_dy;
-		double a_dz = a_State.m_dz;
-		for (auto dit : a_State.m_U){
-			Box dbx0 = a_State.m_Jacobian_ave[dit].box();
-			//Filling Jacobian values in ghost cells for low side of dir == 0 here. This will be the inner boundary in r direction once we map to polar, spherical, or cubed sphere grids.
-			if (dbx0.low()[0] < a_State.m_probDom.box().low()[0] && inputs.LowBoundType != 0) {
-				Point ghost_low = dbx0.low();
-	#if DIM == 2
-				Point ghost_high = Point(a_State.m_probDom.box().low()[0]-1, dbx0.high()[1]);
-	#endif
-	#if DIM == 3
-				Point ghost_high = Point(a_State.m_probDom.box().low()[0]-1, dbx0.high()[1], dbx0.high()[2]);
-	#endif
-				Box BoundBox(ghost_low,ghost_high);
-				Box BoundBox1 = BoundBox.grow(1);
-				Scalar Jacobian_ave2(BoundBox1);
-				if (inputs.grid_type_global == 2){
-					MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
-				} else {
-					MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
-				}
-				Jacobian_ave2.copyTo(a_State.m_Jacobian_ave[dit],BoundBox);
-			}
-
-			//Filling Jacobian values in ghost cells for high side of dir == 0 here. This will be the outer boundary in r direction once we map to polar, spherical, or cubed sphere grids.
-			if (dbx0.high()[0] > a_State.m_probDom.box().high()[0] && inputs.HighBoundType != 0) {
-	#if DIM == 2
-				Point ghost_low = Point(a_State.m_probDom.box().high()[0]+1, dbx0.low()[1]);
-	#endif
-	#if DIM == 3
-				Point ghost_low = Point(a_State.m_probDom.box().high()[0]+1, dbx0.low()[1], dbx0.low()[2]);
-	#endif
-				Point ghost_high = dbx0.high();
-				Box BoundBox(ghost_low,ghost_high);
-				Box BoundBox1 = BoundBox.grow(1);
-				Scalar Jacobian_ave2(BoundBox1);
-				if (inputs.grid_type_global == 2){
-					MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
-				} else {
-					MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
-				}
-				Jacobian_ave2.copyTo(a_State.m_Jacobian_ave[dit],BoundBox);
 			}
 		}
 	}
