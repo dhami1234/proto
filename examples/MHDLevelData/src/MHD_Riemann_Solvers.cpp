@@ -1053,10 +1053,10 @@ namespace MHD_Riemann_Solvers {
 			a_F(4) = a_r2detA_1_avg(0)*(e+p0)*a_W(1);
 			a_F(4) -= a_r2detA_1_avg(0)*(1/4.0/c_PI)*(vB)*a_W(5);
 
-			a_F(5) = a_r2detAA_1_avg(0)*a_W(5)*a_W(1) + a_r2detAA_1_avg(1)*a_W(5)*a_W(2) + a_r2detAA_1_avg(2)*a_W(5)*a_W(3);
+			a_F(5) = 0.;//a_r2detAA_1_avg(0)*a_W(5)*a_W(1) + a_r2detAA_1_avg(1)*a_W(5)*a_W(2) + a_r2detAA_1_avg(2)*a_W(5)*a_W(3);
 			a_F(6) = a_r2detAA_1_avg(3)*a_W(5)*a_W(1) + a_r2detAA_1_avg(4)*a_W(5)*a_W(2) + a_r2detAA_1_avg(5)*a_W(5)*a_W(3);
 			a_F(7) = a_r2detAA_1_avg(6)*a_W(5)*a_W(1) + a_r2detAA_1_avg(7)*a_W(5)*a_W(2) + a_r2detAA_1_avg(8)*a_W(5)*a_W(3);
-			a_F(5) -= a_r2detAA_1_avg(0)*a_W(1)*a_W(5) + a_r2detAA_1_avg(1)*a_W(1)*a_W(6) + a_r2detAA_1_avg(2)*a_W(1)*a_W(7);
+			a_F(5) -= 0.;//a_r2detAA_1_avg(0)*a_W(1)*a_W(5) + a_r2detAA_1_avg(1)*a_W(1)*a_W(6) + a_r2detAA_1_avg(2)*a_W(1)*a_W(7);
 			a_F(6) -= a_r2detAA_1_avg(3)*a_W(1)*a_W(5) + a_r2detAA_1_avg(4)*a_W(1)*a_W(6) + a_r2detAA_1_avg(5)*a_W(1)*a_W(7);
 			a_F(7) -= a_r2detAA_1_avg(6)*a_W(1)*a_W(5) + a_r2detAA_1_avg(7)*a_W(1)*a_W(6) + a_r2detAA_1_avg(8)*a_W(1)*a_W(7);
 		}
@@ -1078,10 +1078,10 @@ namespace MHD_Riemann_Solvers {
 			a_F(4) -= a_rrdotdetA_2_avg(0)*(1/4.0/c_PI)*(vB)*a_W(6);
 
 			a_F(5) = a_rrdotdetAA_2_avg(0)*a_W(6)*a_W(1) + a_rrdotdetAA_2_avg(1)*a_W(6)*a_W(2) + a_rrdotdetAA_2_avg(2)*a_W(6)*a_W(3);
-			a_F(6) = a_rrdotdetAA_2_avg(3)*a_W(6)*a_W(1) + a_rrdotdetAA_2_avg(4)*a_W(6)*a_W(2) + a_rrdotdetAA_2_avg(5)*a_W(6)*a_W(3);
+			a_F(6) = 0.;//a_rrdotdetAA_2_avg(3)*a_W(6)*a_W(1) + a_rrdotdetAA_2_avg(4)*a_W(6)*a_W(2) + a_rrdotdetAA_2_avg(5)*a_W(6)*a_W(3);
 			a_F(7) = a_rrdotdetAA_2_avg(6)*a_W(6)*a_W(1) + a_rrdotdetAA_2_avg(7)*a_W(6)*a_W(2) + a_rrdotdetAA_2_avg(8)*a_W(6)*a_W(3);
 			a_F(5) -= a_rrdotdetAA_2_avg(0)*a_W(2)*a_W(5) + a_rrdotdetAA_2_avg(1)*a_W(2)*a_W(6) + a_rrdotdetAA_2_avg(2)*a_W(2)*a_W(7);
-			a_F(6) -= a_rrdotdetAA_2_avg(3)*a_W(2)*a_W(5) + a_rrdotdetAA_2_avg(4)*a_W(2)*a_W(6) + a_rrdotdetAA_2_avg(5)*a_W(2)*a_W(7);
+			a_F(6) -= 0.;//a_rrdotdetAA_2_avg(3)*a_W(2)*a_W(5) + a_rrdotdetAA_2_avg(4)*a_W(2)*a_W(6) + a_rrdotdetAA_2_avg(5)*a_W(2)*a_W(7);
 			a_F(7) -= a_rrdotdetAA_2_avg(6)*a_W(2)*a_W(5) + a_rrdotdetAA_2_avg(7)*a_W(2)*a_W(6) + a_rrdotdetAA_2_avg(8)*a_W(2)*a_W(7);
 		}
 
@@ -1103,13 +1103,11 @@ namespace MHD_Riemann_Solvers {
 
 			a_F(5) = a_rrdotdetAA_3_avg(0)*a_W(7)*a_W(1) + a_rrdotdetAA_3_avg(1)*a_W(7)*a_W(2) + a_rrdotdetAA_3_avg(2)*a_W(7)*a_W(3);
 			a_F(6) = a_rrdotdetAA_3_avg(3)*a_W(7)*a_W(1) + a_rrdotdetAA_3_avg(4)*a_W(7)*a_W(2) + a_rrdotdetAA_3_avg(5)*a_W(7)*a_W(3);
-			a_F(7) = a_rrdotdetAA_3_avg(6)*a_W(7)*a_W(1) + a_rrdotdetAA_3_avg(7)*a_W(7)*a_W(2) + a_rrdotdetAA_3_avg(8)*a_W(7)*a_W(3);
+			a_F(7) = 0.;//a_rrdotdetAA_3_avg(6)*a_W(7)*a_W(1) + a_rrdotdetAA_3_avg(7)*a_W(7)*a_W(2) + a_rrdotdetAA_3_avg(8)*a_W(7)*a_W(3);
 			a_F(5) -= a_rrdotdetAA_3_avg(0)*a_W(3)*a_W(5) + a_rrdotdetAA_3_avg(1)*a_W(3)*a_W(6) + a_rrdotdetAA_3_avg(2)*a_W(3)*a_W(7);
 			a_F(6) -= a_rrdotdetAA_3_avg(3)*a_W(3)*a_W(5) + a_rrdotdetAA_3_avg(4)*a_W(3)*a_W(6) + a_rrdotdetAA_3_avg(5)*a_W(3)*a_W(7);
-			a_F(7) -= a_rrdotdetAA_3_avg(6)*a_W(3)*a_W(5) + a_rrdotdetAA_3_avg(7)*a_W(3)*a_W(6) + a_rrdotdetAA_3_avg(8)*a_W(3)*a_W(7);
+			a_F(7) -= 0.;//a_rrdotdetAA_3_avg(6)*a_W(3)*a_W(5) + a_rrdotdetAA_3_avg(7)*a_W(3)*a_W(6) + a_rrdotdetAA_3_avg(8)*a_W(3)*a_W(7);
 		}
-
-
 	}
 	PROTO_KERNEL_END(Get_mapped_flux_calcF, Get_mapped_flux_calc)
 

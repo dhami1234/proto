@@ -365,11 +365,8 @@ namespace MHD_Initialize {
 			double rad = sqrt(x*x+y*y+z*z);
 			double phi = atan2(y,x);
 			double theta = acos(z/rad);
-			// rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
 			rho = 700*1.67262192e-24*pow(inputs.r_in*c_AU/rad,2.0); // rho at 21.5 c_SR is about 700/cm3
-			// p = 1.0;
 			p = 1.0e-7*pow(inputs.r_in*c_AU/rad,2.0*a_gamma); // p near 21.5 c_SR is about 1e-7 dyne/cm2
-			// p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
 
 			if (inputs.initialize_in_spherical_coords == 1){
 				u = 500.0*1e5;  // v at 21.5 c_SR is about 500 km/s
@@ -388,16 +385,14 @@ namespace MHD_Initialize {
 			double rad = sqrt(x*x+y*y+z*z);
 			double phi = atan2(y,x);
 			double theta = acos(z/rad);
-			rho = 10.0*pow(inputs.r_in*c_AU/rad,2.0);
-			p = 1.0*pow(inputs.r_in*c_AU/rad,2.0*a_gamma);
+			rho = 700*c_MP*pow(inputs.r_in*c_AU/rad,2.0); // rho at 21.5 c_SR is about 700/cm3
+			p = 1.0e-7*pow(inputs.r_in*c_AU/rad,2.0*a_gamma); // p near 21.5 c_SR is about 1e-7 dyne/cm2
 
 			if (inputs.initialize_in_spherical_coords == 1){
-				u = 5.0;
+				u = 500.0*1e5;  // v at 21.5 c_SR is about 500 km/s
 				v = 0.0;
 				w = 0.0; 
-				// Bx = 1.0;
-				// Bx = 1.0*cos(theta)*pow(inputs.r_in*c_AU/rad,2.0);
-				Bx = 1.0*pow(inputs.r_in*c_AU/rad,1.0);
+				Bx = -0.005*(atan(12*(theta-c_PI/2))/atan(12*(100-c_PI/2)))*pow(inputs.r_in*c_AU/rad,2.0); // Br at 21.5 c_SR is about 0.005 G
 			} else {
 				u = 5.0*sin(theta)*cos(phi);
 				v = 5.0*sin(theta)*sin(phi);
@@ -519,11 +514,17 @@ namespace MHD_Initialize {
 			Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
 			// UBig +=  Lap;
 
-			// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
+			HDF5Handler h5;
+			// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, UBig, "UBig");
 			MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_State.m_U[dit], UBig, a_State.m_detAA_avg[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], true);
-			// MHD_Output_Writer::WriteBoxData_array_nocoord(a_State.m_U[dit], a_dx, a_dy, a_dz, "a_State.m_U");
-			// MHD_Mapping::JU_to_U_Sph_ave_calc_func(UBig, a_State.m_U[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], false);
-			// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig_again");
+			// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, a_State.m_U[dit], "a_State_init");
+			
+			Vector a_U_Sph_ave(dbx0), a_U_Sph_actual_ave(dbx0), W_bar(dbx0);
+			MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_ave, a_State.m_U[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], false);
+			MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_actual_ave, a_State.m_U[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], true);
+			MHD_Mapping::Correct_V_theta_phi_at_poles(a_U_Sph_ave, a_dx, a_dy, a_dz);
+			MHDOp::consToPrimSphcalc(W_bar,a_U_Sph_ave, a_U_Sph_actual_ave, a_gamma);
+			// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, W_bar, "W_bar_init");
 		}
 	}
 

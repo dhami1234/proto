@@ -145,7 +145,6 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 		// new_state[ dit]+=(a_DX.m_DU)[ dit];
         new_state[ dit]+=idOp((a_DX.m_DU)[ dit]);  //Phil found doing this improves performance
 	}
-	HDF5Handler h5;
 	if (inputs.grid_type_global == 2){
 		new_state.defineExchange<PolarExchangeCopier>(2,1);
 	}
@@ -178,6 +177,11 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 		MHDOp::step(a_DX.m_DU,new_state,a_State, dt_temp);
 	}
 
+	HDF5Handler h5;
+	for (auto dit : a_State.m_U){
+		// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, new_state[dit], "new_state_RK4");
+		// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, a_State.m_U[dit], "a_State.m_U_RK4");
+	}
 	if (!a_State.m_min_dt_calculated){
 		double mintime;
 		#ifdef PR_MPI

@@ -112,11 +112,8 @@ int main(int argc, char* argv[])
 		std::cout << "proc_id: " << pid << ";      num boxes: " << count << std::endl;
 
 		if (inputs.grid_type_global == 2){
-			if (inputs.Spherical_2nd_order == 1){
 				MHD_Mapping::Spherical_2O_map_filling_func(state);
-			} else {
 				MHD_Mapping::Spherical_map_filling_func(state);
-			}
 		} else {
 			MHD_Mapping::Regular_map_filling_func(state);
 		}
@@ -150,7 +147,9 @@ int main(int argc, char* argv[])
 			time = h5.time();
 			dt = h5.dt();
 		}
-
+		for (auto dit : state.m_U){
+			// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, state.m_U[dit], "state.m_U_Test");
+		}
 		int start_iter = 0;
 		if (inputs.restartStep != 0) {start_iter = inputs.restartStep;}
 		if(pid==0) cout << "starting time loop from step " << start_iter << " , maxStep = " << inputs.maxStep << endl;
@@ -163,9 +162,9 @@ int main(int argc, char* argv[])
 			state.m_divB_calculated = false;
 			state.m_Viscosity_calculated = false;
 			state.m_min_dt_calculated = false;
-			for (auto dit : state.m_U){	
-				MHDOp::Fix_negative_P(state.m_U[ dit],inputs.gamma);	
-			}
+			// for (auto dit : state.m_U){	
+			// 	MHDOp::Fix_negative_P(state.m_U[ dit],inputs.gamma); // Current version only for 2nd order spherical	
+			// }
 			if (k!=start_iter){
 				if (k!=start_iter+1){
 					if (inputs.convTestType == 0){

@@ -200,30 +200,17 @@ namespace MHDOp {
 
 			for (int d = 0; d < DIM; d++)
 			{
-				Vector W_ave_low_temp(dbx0), W_ave_high_temp(dbx0), Lambda_f(dbx0);
+				Vector W_ave_low_temp(dbx0), W_ave_high_temp(dbx0);
 				Vector W_ave_low(dbx0), W_ave_high(dbx0);
-				Scalar N_d_sq(dbx1);
-				// W_ave_low_temp = m_interp_edge[d](W_ave);
-				// W_ave_high_temp = m_copy(W_ave_low_temp);
 				W_ave_low_temp = m_interp_L[d](W_ave);
 				W_ave_high_temp = m_interp_H[d](W_ave);
-
-
-
 				MHD_Limiters::MHD_Limiters_4O(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);
-
 				Vector W_low = m_deconvolve_f[d](W_ave_low);
 				Vector W_high = m_deconvolve_f[d](W_ave_high);
-
-
 				Vector F_f(dbx1), F_ave_f(dbx1);
 				Vector F_f_mapped(dbx1);
-				// Vector F_f_mapped_noghost(dbx2);
 				F_f_mapped.setVal(0.0);
-				// F_f_mapped_noghost.setVal(0.0);
 				double dx_d = dxd[d];
-
-
 				for (int s = 0; s < DIM; s++) {
 					if (inputs.Riemann_solver_type == 1) {
 						MHD_Riemann_Solvers::Rusanov_Solver(F_f,W_low,W_high,s,gamma);
@@ -232,9 +219,7 @@ namespace MHDOp {
 						MHD_Riemann_Solvers::Roe8Wave_Solver(F_f,W_low,W_high,s,gamma);
 					}
 					Scalar N_s_d_ave_f = slice(a_State.m_N_ave_f[dit],d*DIM+s);
-
 					F_ave_f = m_convolve_f[d](F_f);
-
 					Vector dot_pro_sum(dbx1);
 					dot_pro_sum.setVal(0.0);
 					for (int s_temp = 0; s_temp < DIM; s_temp++) {
@@ -245,10 +230,7 @@ namespace MHDOp {
 							dot_pro_sum += dot_pro;
 						}
 					}
-
 					Vector F_f_mapped1D = forall<double,NUMCOMPS>(F_f_mapped1D_calc,F_ave_f,N_s_d_ave_f,dot_pro_sum,dx_d);
-
-
 					F_f_mapped += F_f_mapped1D;
 				}
 				Vector Rhs_d = m_divergence[d](F_f_mapped);
@@ -301,34 +283,20 @@ namespace MHDOp {
 		double a_dz = a_State.m_dz;
 		double gamma = a_State.m_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz}; // Because now its r, theta, phi
-
 		double dt_new;
 		for (auto dit : a_State.m_U){
-
 			Box dbx0 = a_JU_ave[dit].box();
 			Box dbx1 = dbx0.grow(NGHOST-NGHOST);
-			//Box dbx1 = dbx0;
-			Box dbx2 = dbx0.grow(1-NGHOST);
 			a_Rhs[dit].setVal(0.0);
 			Vector a_U_Sph_ave(dbx0), a_U_Sph_actual_ave(dbx0);
 			MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_ave, a_JU_ave[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], false);
 			MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_actual_ave, a_JU_ave[dit], a_State.m_detAA_inv_avg[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit], a_State.m_A_row_mag_avg[dit], true);
-			// MHD_Mapping::JU_to_U_ave_calc_func(a_U_ave, a_JU_ave[dit], a_State.m_r2rdot_avg[dit], a_State.m_detA_avg[dit]);
 			MHD_Mapping::Correct_V_theta_phi_at_poles(a_U_Sph_ave, a_dx, a_dy, a_dz);
-
-			// Vector W_bar = forall<double,NUMCOMPS>(consToPrim, a_U_Sph_ave, gamma);
 			Vector W_bar = forall<double,NUMCOMPS>(consToPrimSph, a_U_Sph_ave, a_U_Sph_actual_ave, gamma);
-
-			// MHD_Output_Writer::WriteBoxData_array_nocoord(W_bar, a_dx, a_dy, a_dz, "W_bar");
-			// Vector U = m_deconvolve(a_U_Sph_ave);
-			// Vector U_Sph_actual = m_deconvolve(a_U_Sph_actual_ave);
-			// // Vector W  = forall<double,NUMCOMPS>(consToPrimSph,U, gamma);
-			// Vector W  = forall<double,NUMCOMPS>(consToPrimSph,U, U_Sph_actual, gamma);
-			// Vector W_ave = m_laplacian(W_bar,1.0/24.0);
-			// W_ave += W;
-
 			Vector W_ave = m_copy(W_bar);
-
+			HDF5Handler h5;
+			// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, W_ave, "W_MHDOp");
+			// if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, a_JU_ave[dit], "a_JU_ave_MHDOp");
 			if (!a_State.m_min_dt_calculated){ 
 				MHD_CFL::Min_dt_calc_func(dt_new, W_ave, a_dx, a_dy, a_dz, gamma);	
 				if (dt_new < a_min_dt) a_min_dt = dt_new;
@@ -342,37 +310,19 @@ namespace MHDOp {
 
 				W_ave_low_temp = m_interp_L[d](W_ave);
 				W_ave_high_temp = m_interp_H[d](W_ave);
-				// W_ave_low_temp = m_interp_edge[d](W_ave);
-				// W_ave_high_temp = m_copy(W_ave_low_temp);
-
-				// W_ave_low_temp = m_interp_f_2nd[d](W_ave);
-				// W_ave_high_temp = m_interp_f_2nd[d](W_ave);
 
 				MHD_Limiters::MHD_Limiters_4O(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);			
-				// // Vector W_low = m_deconvolve_f[d](W_ave_low);
-				// Vector W_low = m_copy(W_ave_low);
-				// // Vector W_high = m_deconvolve_f[d](W_ave_high);
-				// Vector W_high = m_copy(W_ave_high);
-
+				// MHD_Limiters::MHD_Limiters_minmod(W_ave_low,W_ave_high,W_ave,a_State.m_x_sph_cc[dit],a_State.m_dx_sph[dit],d);
 				MHD_Mapping::W_Sph_to_W_normalized_sph(W_ave_low_actual, W_ave_low, a_State.m_A_row_mag_1_avg[dit], a_State.m_A_row_mag_2_avg[dit], a_State.m_A_row_mag_3_avg[dit], d);
 				MHD_Mapping::W_Sph_to_W_normalized_sph(W_ave_high_actual, W_ave_low, a_State.m_A_row_mag_1_avg[dit], a_State.m_A_row_mag_2_avg[dit], a_State.m_A_row_mag_3_avg[dit], d);
-
-
-				Vector F_ave_f(dbx0), F_f(dbx0);
+				
+				Vector F_ave_f(dbx0);
 				F_ave_f.setVal(0.0);
-				F_f.setVal(0.0);
-				// Vector F_f_mapped_noghost(dbx2);
-				// F_f_mapped_noghost.setVal(0.0);
 				double dx_d = dxd[d];
 				MHD_Riemann_Solvers::Spherical_Riemann_Solver(F_ave_f, W_ave_low, W_ave_high, W_ave_low_actual, W_ave_high_actual, a_State.m_r2detA_1_avg[dit], a_State.m_r2detAA_1_avg[dit], a_State.m_r2detAn_1_avg[dit], a_State.m_rrdotdetA_2_avg[dit], a_State.m_rrdotdetAA_2_avg[dit], a_State.m_rrdotd3ncn_2_avg[dit], a_State.m_rrdotdetA_3_avg[dit], a_State.m_rrdotdetAA_3_avg[dit], a_State.m_rrdotncd2n_3_avg[dit], d, gamma, a_dx, a_dy, a_dz);	
 				Vector Rhs_d = m_divergence[d](F_ave_f);
 				Rhs_d *= -1./dx_d;
 				a_Rhs[dit] += Rhs_d;
-				// F_f_mapped_noghost += F_ave_f;
-				// if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F0_m1");
-				// if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F1_m1");
-				// if (d==2) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F2_m1");
-
 			}
 		}
 	}
@@ -592,6 +542,7 @@ namespace MHDOp {
 			RhsV.setVal(0.0);
 			RhsV_divB.setVal(0.0);
 
+			MHDOp::Fix_negative_P(a_U[dit],inputs.gamma);	
 			Vector W_low_temp(dbx0), W_high_temp(dbx0), W_low(dbx0), W_high(dbx0);
 			BoxData<double,NUMCOMPS> W_sph(dbx0);
 			Vector W_cart  = forall<double,NUMCOMPS>(consToPrim, a_U[dit], gamma);
