@@ -14,4 +14,8 @@ namespace MHD_Set_Boundary_Values {
 	void interpolate_h5_BC(MHDLevelDataState& state,
 						const BoxData<double,NUMCOMPS>& BC_data,
 						const double time);
+
+	void interpolate_h5_BC(MHDLevelDataState& state,
+						const std::vector<BoxData<double,NUMCOMPS>>& BC_data,
+						const double time);					
 }

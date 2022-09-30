@@ -125,10 +125,17 @@ int main(int argc, char* argv[])
 		HDF5Handler h5;
 
 		// Read data from h5 BC
-		BoxData<double, NUMCOMPS> BC_data;
+		// BoxData<double, NUMCOMPS> BC_data;
+		std::vector<BoxData<double, NUMCOMPS, HOST>> BC_data;
+
 		std::vector<double> dtheta;
 		if (inputs.grid_type_global == 2) reader.readData(BC_data, inputs.BC_file);
 		if (inputs.grid_type_global == 2) reader.readGeom(dtheta, inputs.BC_file);
+
+		// for (int ii = 0; ii < BC_data.size(); ii++)
+    	// {
+        // 	h5.writePatch(1, BC_data[ii], "STATE_%i", ii);
+    	// }
 		
 		if (inputs.restartStep == 0){
 			if (inputs.grid_type_global == 2 && (inputs.initialize_in_spherical_coords == 1)){

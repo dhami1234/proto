@@ -356,4 +356,77 @@ namespace MHD_Set_Boundary_Values {
 		}
 	}
 
+
+
+	PROTO_KERNEL_START
+	void InterpolateFramesF(const Point& a_pt,
+						Var<double,NUMCOMPS>& a_BC_data_interpolated,
+						Var<double,NUMCOMPS>& a_BC_data_lo,
+						Var<double,NUMCOMPS>& a_BC_data_hi,
+	                   	double a_fraction)
+	{
+		for (int i=0; i<NUMCOMPS; i++){
+			a_BC_data_interpolated(i) = a_fraction*a_BC_data_hi(i) + (1.0-a_fraction)*a_BC_data_lo(i);
+		}
+
+	}
+	PROTO_KERNEL_END(InterpolateFramesF, InterpolateFrames)
+
+
+
+	void interpolate_h5_BC(MHDLevelDataState& state,
+						const std::vector<BoxData<double,NUMCOMPS>>& BC_data,
+						const double time)
+	{
+		LevelBoxData<double,NUMCOMPS> BC1;
+		BC1.define(state.m_dbl,Point::Zero());
+		LevelBoxData<double,NUMCOMPS> BC2;
+		BC2.define(state.m_dbl,Point::Zero());
+		
+		
+		double h5_cadence = 24.0; //hrs
+
+		double time_temp = time+0*h5_cadence*3600;
+
+		int low_frame = time_temp/(h5_cadence*3600);
+
+		double needed_fraction = (time_temp - (low_frame*h5_cadence*3600))/(h5_cadence*3600);
+		
+		BoxData<double, NUMCOMPS> BC_data_rotated1;
+		BoxData<double, NUMCOMPS> BC_data_rotated2;
+		double carr_rot_time = 25.38*24*60*60; // Seconds
+
+		double effective_time1 = 360*(time_temp+low_frame*h5_cadence*3600)/carr_rot_time;
+		double effective_time2 = 360*(time_temp+(low_frame+1)*h5_cadence*3600)/carr_rot_time;
+		double angle_to_rotate1 = fmod(effective_time1,360);
+		double angle_to_rotate2 = fmod(effective_time2,360);
+		int cells_to_rotate1 = angle_to_rotate1/(360/inputs.domainSizez);
+		int cells_to_rotate2 = angle_to_rotate2/(360/inputs.domainSizez);
+		double needed_fraction1 = angle_to_rotate1/(360/inputs.domainSizez) - cells_to_rotate1;
+		double needed_fraction2 = angle_to_rotate2/(360/inputs.domainSizez) - cells_to_rotate2;
+		cells_to_rotate1 = cells_to_rotate1 % inputs.domainSizez;
+		cells_to_rotate2 = cells_to_rotate2 % inputs.domainSizez;
+		cells_to_rotate1 = inputs.domainSizez - cells_to_rotate1;
+		cells_to_rotate2 = inputs.domainSizez - cells_to_rotate2;
+
+		// if(procID()==0) cout << " low_frame = " << low_frame << " needed_fraction = " << needed_fraction << " cells_to_rotate1 " << cells_to_rotate1 << " cells_to_rotate2 " << cells_to_rotate2 << endl;
+
+		static Stencil<double> m_right_shift1;
+		static Stencil<double> m_right_shift2;
+		m_right_shift1 = (1.0-needed_fraction1)*Shift(Point::Zeros()) + (needed_fraction1)*Shift(-Point::Basis(2));
+		m_right_shift2 = (1.0-needed_fraction2)*Shift(Point::Zeros()) + (needed_fraction2)*Shift(-Point::Basis(2));
+		Box dbx0 = BC_data[low_frame].box();
+		for (auto dit : state.m_U)
+		{	
+			BC_data[low_frame].copyTo(state.m_BC[ dit],dbx0,Point::Basis(2)*(-cells_to_rotate1));
+			BC1[ dit] = m_right_shift1(state.m_BC[ dit]);
+			BC_data[low_frame+1].copyTo(state.m_BC[ dit],dbx0,Point::Basis(2)*(-cells_to_rotate2));
+			BC2[ dit] = m_right_shift2(state.m_BC[ dit]);
+
+			forallInPlace_p(InterpolateFrames, state.m_BC[ dit], BC1[ dit], BC2[ dit], needed_fraction);
+
+		}
+
+	}
+
 }
