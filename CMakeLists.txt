@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
+function(submodule_error module)
+  message(FATAL_ERROR "\
+  The ${module} submodule is not present.\n \
+  If in git repository run the following two commands:\n \
+  git submodule init\n \
+  git submodule update")
+endfunction()
+
 if(DEFINED PROTO_LOADED)
   return() # Proto has already been loaded by encompassing CMake project
 endif()
@@ -25,6 +33,7 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)
 option(AMR "Build AMR libraries" OFF)
 option(MMB "Build MMB libraries" OFF)
+option(OPS "Build Operator libraries" OFF)
 option(ENABLE_MPI "Build using MPI" ON)
 option(ENABLE_OPENMP "Build using OpenMP" OFF)
 option(ENABLE_CUDA "Build using CUDA" OFF)
@@ -53,6 +62,23 @@ endif()
 if (MMB)
     message(STATUS "MMB libraries are enabled")
     add_compile_definitions(PR_MMB)
+endif()
+
+if (OPS)
+    message(STATUS "Operator libraries are enabled")
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/blis/include)
+        execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/configure_blis)
+    endif()
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/blis/include)
+        submodule_error("BLIS")
+    else()
+        file(GLOB CONFIG RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/blis/include/ blis/include/*)
+        include_directories(./blis/include/${CONFIG})
+        link_directories(./blis/lib/${CONFIG})
+        link_libraries(blis)
+    endif()
+    add_compile_definitions(PR_OPS)
+    link_libraries(lapack)
 endif()
 
 if(MEMCHECK)
@@ -99,7 +125,7 @@ if(ENABLE_CUDA OR ENABLE_HIP)
       set(CMAKE_PREFIX_PATH $ENV{CMAKE_PREFIX_PATH} CACHE PATH "Path to find Rocm")
     endif()
     set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
-    set(LIB_DEP hip)
+    list(APPEND LIB_DEP hip)
     add_compile_definitions(PROTO_HIP)
   else()
     if(DEFINED CUDA_TOOLKIT_ROOT_DIR)
@@ -121,13 +147,13 @@ if(ENABLE_CUDA OR ENABLE_HIP)
       endif()
     endif()
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr --expt-extended-lambda")
-    set(LIB_DEP cuda)
+    list(APPEND LIB_DEP cuda)
   endif()
 endif()
 
 if(ENABLE_MPI)
   add_compile_definitions(PR_MPI)
-  set(LIB_DEP ${LIB_DEP} mpi)
+  list(APPEND LIB_DEP mpi)
   set(ENABLE_WRAP_ALL_TESTS_WITH_MPIEXEC TRUE)  # needed by BLT to make mpiexec commands
   if(DEFINED CMAKE_APPLE_SILICON_PROCESSOR)
     get_filename_component(MPI_LINK /usr/local/bin/mpiexec REALPATH)
@@ -136,8 +162,9 @@ if(ENABLE_MPI)
    endif()
 endif()
 
+
 if(ENABLE_OPENMP)
-  set(LIB_DEP ${LIB_DEP} openmp)
+    list(APPEND LIB_DEP openmp)
 endif()
 
 if(ENABLE_HDF5)
@@ -175,7 +202,7 @@ if(ENABLE_HDF5)
         set(ENABLE_HDF5 OFF)
       endif()
     endif()
-    if(ENABLE_HDF5)  # only turned off on Linux laptops
+    if(ENABLE_HDF5)  # only turned off on Linux laptops with no hdf5 module
       find_package(HDF5 REQUIRED)
     endif()
 endif()
@@ -199,11 +226,7 @@ if (NOT BLT_LOADED)
     set (BLT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/blt CACHE PATH "")
 
     if (NOT EXISTS ${BLT_SOURCE_DIR}/SetupBLT.cmake)
-      message(FATAL_ERROR "\
-      The BLT submodule is not present.\n \
-      If in git repository run the following two commands:\n \
-      git submodule init\n \
-      git submodule update")
+        submodule_error("BLT")
     endif ()
   endif ()
 
